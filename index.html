@@ -1,0 +1,3673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIORA — Commission Summary Generator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+.topbar {
+  background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+  color: white; padding: 16px 32px;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.topbar .logo { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+.topbar .subtitle { font-size: 13px; opacity: 0.8; }
+
+/* Tab Nav */
+.tab-nav {
+  background: white; border-bottom: 2px solid #e2e8f0;
+  display: flex; padding: 0 32px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  position: sticky; top: 0; z-index: 100;
+}
+.tab-btn {
+  padding: 14px 22px; font-size: 14px; font-weight: 600;
+  color: #718096; border: none; background: none;
+  cursor: pointer; border-bottom: 3px solid transparent;
+  margin-bottom: -2px; transition: all 0.2s;
+}
+.tab-btn:hover { color: #2d6a4f; }
+.tab-btn.active { color: #2d6a4f; border-bottom-color: #2d6a4f; }
+.tab-page { display: none; }
+.tab-page.active { display: block; }
+
+.container { max-width: 1100px; margin: 28px auto; padding: 0 20px 60px; }
+
+/* Cards */
+.card {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 24px 28px; margin-bottom: 20px;
+}
+.card-title {
+  font-size: 15px; font-weight: 700; color: #2d6a4f;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+}
+.step-badge {
+  background: #2d6a4f; color: white;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+
+/* Upload box */
+.upload-box {
+  border: 2px dashed #cbd5e0; border-radius: 12px;
+  padding: 28px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: #f7fafc; max-width: 500px; margin: 0 auto;
+}
+.upload-box:hover, .upload-box.drag-over { border-color: #2d6a4f; background: #f0faf5; }
+.upload-box.has-files { border-style: solid; border-color: #2d6a4f; background: #f0faf5; }
+.upload-box input[type=file] { display: none; }
+.upload-icon { font-size: 36px; margin-bottom: 10px; }
+.upload-hint { font-size: 13px; color: #718096; }
+
+.file-list { list-style: none; margin-top: 10px; text-align: left; }
+.file-list li {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #2d6a4f;
+  padding: 4px 0; border-bottom: 1px solid #e2e8f0;
+}
+.file-list li:last-child { border-bottom: none; }
+.file-list li .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-list li .fsize { color: #a0aec0; font-size: 11px; white-space: nowrap; }
+.file-list li .fdel { color: #fc8181; cursor: pointer; font-size: 14px; padding: 0 4px; }
+.file-list li .fdel:hover { color: #e53e3e; }
+
+.date-badge {
+  display: inline-block; margin-top: 8px;
+  font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 20px; background: #e6f4ef; color: #276749;
+}
+.date-badge.warn { background: #fffbeb; color: #744210; }
+
+.add-more-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #2d6a4f; cursor: pointer;
+  margin-top: 8px; padding: 4px 0; border: none; background: none;
+}
+.add-more-btn:hover { text-decoration: underline; }
+
+/* Buttons */
+.btn-primary {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, #2d6a4f, #1b4332);
+  color: white; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(45,106,79,0.35); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-action {
+  padding: 9px 18px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.btn-green  { background: #2d6a4f; color: white; }
+.btn-green:hover  { background: #1b4332; }
+.btn-dark   { background: #2d3748; color: white; }
+.btn-dark:hover   { background: #1a202c; }
+.btn-red    { background: #c53030; color: white; }
+.btn-red:hover    { background: #9b2c2c; }
+.btn-gray   { background: #e2e8f0; color: #4a5568; }
+.btn-gray:hover   { background: #cbd5e0; }
+.btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Progress */
+.progress-wrap { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 12px; overflow: hidden; display: none; }
+.progress-bar  { height: 100%; background: #2d6a4f; border-radius: 3px; transition: width 0.3s; width: 0%; }
+
+/* Status */
+.status-box { border-radius: 10px; padding: 14px 18px; font-size: 13px; display: none; }
+.status-box.show { display: block; }
+.status-box.info    { background:#ebf8ff; border:1px solid #90cdf4; color:#2b6cb0; }
+.status-box.success { background:#f0fff4; border:1px solid #68d391; color:#276749; }
+.status-box.error   { background:#fff5f5; border:1px solid #fc8181; color:#c53030; }
+
+/* Daily Summary Table */
+/* ── Branch Summary Tables ── */
+.branch-section { margin-bottom: 24px; }
+.branch-section-title {
+  font-size: 13px; font-weight: 700; color: #fff;
+  padding: 6px 14px; border-radius: 6px 6px 0 0;
+  letter-spacing: 0.5px;
+}
+.branch-title-LS { background: #276749; }
+.branch-title-AS { background: #2b4c8c; }
+.branch-title-SK { background: #744210; }
+.branch-title-LP { background: #553c9a; }
+.branch-title-OS { background: #97266d; }
+table.branch-tbl {
+  width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap;
+}
+table.branch-tbl th {
+  padding: 6px 10px; text-align: center; background: #f7fafc; color: #2d3748;
+  border: 1px solid #e2e8f0; font-weight: 600;
+}
+table.branch-tbl th.th-left { text-align: left; }
+table.branch-tbl td { padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: middle; }
+table.branch-tbl tr:hover td { background: #f0fff4; }
+table.branch-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.branch-tbl .total-row td { background: #fffff0; font-weight: 700; border-top: 2px solid #d69e2e; }
+table.branch-tbl .grand-row td { background: #2d3748; color: #fff; font-weight: 700; }
+.daily-table-wrap { overflow-x: auto; margin-top: 4px; }
+table.daily-tbl {
+  width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap;
+}
+table.daily-tbl th {
+  background: #2d3748; color: white;
+  padding: 8px 10px; text-align: center; position: sticky; top: 0; z-index: 2;
+}
+table.daily-tbl th.th-left { text-align: left; }
+table.daily-tbl td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+table.daily-tbl tr:hover td { background: #f7fafc; }
+table.daily-tbl .num { text-align: right; }
+table.daily-tbl input.cell-edit {
+  width: 72px; border: 1.5px solid #90cdf4; border-radius: 4px;
+  padding: 3px 5px; font-size: 12px; text-align: right; background: #ebf8ff; outline: none;
+}
+table.daily-tbl input.cell-edit:focus { border-color: #2d6a4f; }
+table.daily-tbl input.cell-edit.name-edit { width: 120px; text-align: left; }
+table.daily-tbl .co-sinsub  td { border-left: 3px solid #2d6a4f; }
+table.daily-tbl .co-sukjai  td { border-left: 3px solid #3b5998; }
+table.daily-tbl .co-happines td { border-left: 3px solid #c0962c; }
+table.daily-tbl .co-unknown td { border-left: 3px solid #9b59b6; }
+.co-hdr-sinsub  { background: #2d6a4f !important; }
+.co-hdr-sukjai  { background: #3b5998 !important; }
+.co-hdr-happines { background: #c0962c !important; }
+.co-hdr-unknown  { background: #9b59b6 !important; }
+.total-row td { background: #1a3a2a !important; color: white !important; font-weight: 700; }
+.subtotal-row td { background: #e8f5ee !important; font-weight: 600; color: #1b4332; }
+
+/* Master Summary */
+.master-period-bar {
+  background: linear-gradient(135deg, #1b4332, #2d6a4f);
+  color: white; border-radius: 12px; padding: 16px 24px;
+  display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+  margin-bottom: 20px;
+}
+.pb-item { text-align: center; }
+.pb-label { font-size: 11px; opacity: 0.75; margin-bottom: 2px; }
+.pb-val { font-size: 19px; font-weight: 700; }
+.pb-sep { width: 1px; height: 36px; background: rgba(255,255,255,0.2); }
+
+/* GitHub form */
+
+/* GitHub Settings collapsible */
+.gh-collapse-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: #718096; padding: 2px 6px;
+  border-radius: 6px; transition: all 0.15s; margin-left: auto;
+}
+.gh-collapse-btn:hover { background: #e2e8f0; color: #2d6a4f; }
+.gh-form-wrap { transition: max-height 0.3s ease, opacity 0.3s ease; overflow: hidden; }
+.gh-form-wrap.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
+
+.gh-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.gh-form label { font-size: 12px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px; }
+.gh-form input {
+  border: 1.5px solid #cbd5e0; border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; background: #f7fafc; outline: none; width: 100%;
+}
+.gh-form input:focus { border-color: #2d6a4f; }
+.gh-form .field { flex: 1; min-width: 150px; }
+.gh-form .field-lg { flex: 2; min-width: 200px; }
+.gh-status { font-size: 12px; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; }
+.gh-status.ok  { background: #f0faf5; color: #276749; }
+.gh-status.err { background: #fff5f5; color: #c53030; }
+.gh-status.info { background: #ebf8ff; color: #2b6cb0; }
+
+/* Upload for master */
+.master-upload-box {
+  border: 2px dashed #e2e8f0; border-radius: 12px;
+  padding: 22px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: #f7fafc;
+}
+.master-upload-box:hover, .master-upload-box.drag-over { border-color: #2d6a4f; background: #f0faf5; }
+.master-upload-box input { display: none; }
+
+/* Diff panel */
+.diff-panel {
+  background: #fffbeb; border: 1.5px solid #f6ad55;
+  border-radius: 10px; padding: 16px 20px; margin-top: 14px; display: none;
+}
+.diff-panel h4 { color: #744210; font-size: 14px; margin-bottom: 10px; }
+.diff-item {
+  font-size: 12px; padding: 4px 8px; border-radius: 5px;
+  margin-bottom: 4px;
+}
+.diff-item.add { background: #f0faf5; color: #276749; }
+.diff-item.dup { background: #fff5f5; color: #c53030; }
+
+/* New employee panel */
+.new-emp-panel {
+  background:#fff8f0; border:1px solid #f6ad55;
+  border-radius:10px; padding:16px; margin-bottom:20px; display:none;
+}
+.new-emp-panel h3 { color:#c05621; font-size:14px; margin-bottom:12px; }
+table.new-emp-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+table.new-emp-tbl th { background:#f6ad55; color:white; padding:6px 10px; text-align:left; }
+table.new-emp-tbl td { padding:6px 10px; border-bottom:1px solid #feebc8; }
+table.new-emp-tbl select, table.new-emp-tbl input { padding:4px 6px; border:1px solid #f6ad55; border-radius:5px; font-size:12px; width:100%; }
+
+/* Spinner */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: white; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* View toggle */
+.view-toggle { display: flex; gap: 6px; }
+.view-toggle button {
+  padding: 6px 14px; border: 1.5px solid #cbd5e0; border-radius: 20px;
+  background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: #718096;
+}
+.view-toggle button.active { background: #2d3748; color: white; border-color: #2d3748; }
+
+.search-box {
+  padding: 7px 12px; border: 1.5px solid #cbd5e0; border-radius: 8px;
+  font-size: 12px; width: 170px; outline: none;
+}
+.search-box:focus { border-color: #2d6a4f; }
+
+.missing-card { background: #fff5f5; border: 1.5px solid #fc8181; border-radius: 10px; padding: 16px 20px; }
+.missing-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.missing-item .item-name { flex: 1; min-width: 200px; font-size: 12px; color: #4a5568; background: #fff; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; }
+.missing-item input[type=number] { width: 90px; border: 1.5px solid #fc8181; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #c53030; font-weight: 700; outline: none; text-align: center; }
+.missing-item input[type=number]:focus { border-color: #2d6a4f; color: #1a202c; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 14px; }
+.empty-state p { color: #718096; font-size: 14px; }
+
+/* ── Multi-date preview ── */
+.multidate-panel { display:none; }
+.multidate-header {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; margin-bottom:16px;
+}
+.multidate-stat {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:#4a5568;
+  background:#f7fafc; border:1px solid #e2e8f0;
+  border-radius:8px; padding:6px 14px;
+}
+.multidate-stat strong { color:#2d6a4f; }
+.multidate-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px;
+  margin-bottom:18px;
+}
+.md-day-card {
+  background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px;
+  padding:12px 14px; cursor:pointer; transition:all 0.15s;
+  position:relative;
+}
+.md-day-card:hover { border-color:#2d6a4f; background:#f0faf5; }
+.md-day-card.expanded { border-color:#2d6a4f; background:#f0faf5; }
+.md-day-card.dup-warn { border-color:#f6ad55; background:#fffbeb; }
+.md-day-date { font-size:13px; font-weight:700; color:#2d3748; margin-bottom:4px; }
+.md-day-meta { font-size:11px; color:#718096; }
+.md-day-badge {
+  position:absolute; top:8px; right:8px; font-size:10px; font-weight:700;
+  padding:2px 7px; border-radius:10px;
+}
+.md-day-badge.new  { background:#c6f6d5; color:#276749; }
+.md-day-badge.dup  { background:#feebc8; color:#744210; }
+.md-day-detail {
+  display:none; margin-top:10px; padding-top:10px;
+  border-top:1px solid #e2e8f0;
+  max-height:240px; overflow-y:auto;
+}
+.md-day-detail.open { display:block; }
+.md-emp-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; padding:3px 0; border-bottom:1px solid #f0f4f8;
+}
+.md-emp-row:last-child { border-bottom:none; }
+.md-emp-nick { font-weight:600; color:#2d6a4f; min-width:50px; }
+.md-emp-total { color:#2d3748; font-variant-numeric:tabular-nums; }
+
+/* ── Drag-and-drop row reorder ── */
+.otrs-wrap { position: relative; display: inline-flex; align-items: center; gap: 2px; }
+.otrs-badge {
+  font-size: 9px; background: #2d6a4f; color: #fff;
+  border-radius: 8px; padding: 0 4px; cursor: pointer;
+  line-height: 14px; min-width: 14px; text-align: center;
+  user-select: none; flex-shrink: 0;
+}
+.otrs-popup {
+  position: absolute; z-index: 9999;
+  background: #1a1a2e; color: #e2e8f0;
+  border: 1px solid #2d6a4f; border-radius: 8px;
+  padding: 8px 12px; font-size: 12px; min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.otrs-popup-title { font-weight: 700; color: #68d391; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.otrs-popup-row { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
+.otrs-popup-row span:last-child { font-weight: 600; color: #f6e05e; }
+.drag-handle {
+  cursor: grab; color: #cbd5e0; font-size: 16px;
+  padding: 0 6px; user-select: none; line-height: 1;
+}
+.drag-handle:active { cursor: grabbing; }
+tr.dragging { opacity: 0.4; background: #e6f4ef !important; }
+tr.drag-over-top td    { border-top: 2px solid #2d6a4f !important; }
+tr.drag-over-bottom td { border-bottom: 2px solid #2d6a4f !important; }
+
+/* ── Calendar / Date Status UI ── */
+.cal-card {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 20px 24px; margin-bottom: 20px;
+}
+.cal-title {
+  font-size: 14px; font-weight: 700; color: #2d3748;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.cal-grid {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.cal-day {
+  width: 38px; height: 38px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; cursor: default;
+  position: relative; transition: transform 0.15s;
+}
+.cal-day:hover { transform: scale(1.12); z-index: 1; }
+.cal-day.empty  { background: #f0f4f8; color: #cbd5e0; }
+.cal-day.has-data { background: #2d6a4f; color: white; box-shadow: 0 2px 6px rgba(45,106,79,0.35); }
+.cal-day.today  { ring: 2px solid #f6ad55; outline: 2px solid #f6ad55; }
+.cal-day.new-data { background: #f6ad55; color: #744210;
+  animation: pulse-new 1.5s ease-in-out 3; }
+@keyframes pulse-new {
+  0%,100% { transform: scale(1); box-shadow: 0 2px 6px rgba(246,173,85,0.4); }
+  50%      { transform: scale(1.18); box-shadow: 0 4px 14px rgba(246,173,85,0.7); }
+}
+.cal-day.clickable { cursor: pointer; }
+.cal-day.clickable:hover { transform: scale(1.15); filter: brightness(1.1); }
+.cal-day.selected { outline: 2.5px solid #1a202c; outline-offset: 1px; }
+
+/* Day Detail Panel */
+.day-detail-panel {
+  margin-top: 14px; border-top: 2px solid #e2e8f0;
+  padding-top: 16px; display: none;
+}
+.day-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+}
+.day-detail-title {
+  font-size: 14px; font-weight: 700; color: #2d3748;
+}
+.day-detail-actions { display: flex; gap: 8px; }
+.ddp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ddp-table th {
+  background: #1b4332; color: white;
+  padding: 6px 8px; text-align: center; font-weight: 600;
+}
+.ddp-table th.th-left { text-align: left; }
+.ddp-table td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+.ddp-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ddp-table tr:hover td { background: #f0faf4; }
+.ddp-table tr.ddp-edit td { background: #fffbeb; }
+.ddp-table .cell-sm {
+  width: 60px; border: 1px solid #d1d5db; border-radius: 4px;
+  padding: 2px 4px; text-align: right; font-size: 11px;
+}
+.ddp-empty { text-align: center; color: #a0aec0; padding: 20px; font-size: 13px; }
+
+.cal-legend {
+  display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;
+}
+.cal-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #718096;
+}
+.cal-legend-dot {
+  width: 12px; height: 12px; border-radius: 3px;
+}
+.cal-month-label {
+  font-size: 11px; font-weight: 700; color: #718096;
+  width: 100%; margin-top: 6px; margin-bottom: 2px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* ── All-Time Total Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 1000; display: flex; align-items: flex-start; justify-content: center;
+  padding: 32px 16px; overflow-y: auto;
+}
+.modal-box {
+  background: white; border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  width: 100%; max-width: 900px;
+  padding: 28px 28px 24px;
+  position: relative;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 18px;
+  background: none; border: none; font-size: 20px; cursor: pointer; color: #718096;
+}
+.modal-close:hover { color: #1a202c; }
+.modal-title {
+  font-size: 16px; font-weight: 700; color: #2d6a4f;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.all-total-tbl { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.all-total-tbl th {
+  background: #1b4332; color: white;
+  padding: 7px 8px; text-align: center; position: sticky; top: 0; z-index: 2;
+}
+.all-total-tbl th.th-left { text-align: left; }
+.all-total-tbl td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+.all-total-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.all-total-tbl tr:hover td { background: #f0faf4; }
+.all-total-tbl .sub-row td { background: #e8f5ee !important; font-weight: 700; color: #1b4332; }
+.all-total-tbl .grand-row td { background: #1a3a2a !important; color: white !important; font-weight: 700; }
+
+/* ── Sync dot pulse ── */
+@keyframes pulse-sync {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(1.4); }
+}
+
+/* ── Branch Detail Tables (Day Detail Panel) ── */
+.bdt-section { margin-bottom: 18px; }
+.bdt-title {
+  font-size: 12px; font-weight: 700; color: #fff;
+  padding: 5px 12px; border-radius: 6px 6px 0 0;
+  letter-spacing: 0.4px;
+}
+.bdt-title-LS { background: #276749; }
+.bdt-title-AS { background: #2b4c8c; }
+.bdt-title-SK { background: #744210; }
+.bdt-title-LP { background: #553c9a; }
+.bdt-title-OS { background: #97266d; }
+table.bdt-tbl {
+  width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap;
+}
+table.bdt-tbl th {
+  padding: 5px 8px; text-align: center; background: #f7fafc;
+  color: #2d3748; border: 1px solid #e2e8f0; font-weight: 600;
+}
+table.bdt-tbl th.th-left { text-align: left; }
+table.bdt-tbl td { padding: 4px 8px; border: 1px solid #e2e8f0; vertical-align: middle; }
+table.bdt-tbl tr:nth-child(even) td { background: #f7fafc; }
+table.bdt-tbl tr:hover td { background: #f0fff4; }
+table.bdt-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.bdt-tbl .sub-row td { background: #e8f5ee !important; font-weight: 700; color: #1b4332; border-top: 2px solid #276749; }
+table.bdt-tbl .grand-row td { background: #fefcbf !important; font-weight: 700; color: #1a202c; border-top: 2px solid #b7791f; font-size: 12px; }
+.bdt-toggle-btn {
+  font-size: 11px; color: #718096; background: none; border: none;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+}
+.bdt-toggle-btn:hover { background: #e2e8f0; color: #2d6a4f; }
+.bdt-wrap { display: none; }
+.bdt-wrap.open { display: block; }
+
+/* ── Search box in DDP ── */
+.ddp-search-wrap {
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.ddp-search {
+  flex: 1; max-width: 220px;
+  padding: 6px 12px; border: 1.5px solid #cbd5e0; border-radius: 8px;
+  font-size: 13px; outline: none;
+}
+.ddp-search:focus { border-color: #2d6a4f; }
+.ddp-search-count { font-size: 11px; color: #a0aec0; }
+
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="logo">DIORA SPA</div>
+    <div class="subtitle">Commission Summary Generator</div>
+  </div>
+</div>
+
+
+
+
+
+
+<!-- ════════════════════════════════════════
+     MASTER TAB
+════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-master">
+<div class="container">
+
+  <!-- GitHub Settings -->
+  <div class="card">
+    <div class="card-title" style="cursor:pointer;user-select:none" onclick="ghToggleCollapse()">
+      🔗 เชื่อมต่อ GitHub (optional)
+      <button class="gh-collapse-btn" id="gh-collapse-btn" title="ซ่อน/แสดง">▲</button>
+    </div>
+    <div class="gh-form-wrap" id="gh-form-wrap" style="max-height:400px;opacity:1">
+    <div class="gh-form">
+      <div class="field">
+        <label>Personal Access Token</label>
+        <input type="password" id="gh-token" placeholder="github_pat_xxxx" autocomplete="off">
+      </div>
+      <div class="field-lg">
+        <label>Repository (owner/repo)</label>
+        <input type="text" id="gh-repo" placeholder="your-org/diora-data">
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="gh-branch" value="main">
+      </div>
+      <div class="field">
+        <label>File Path</label>
+        <input type="text" id="gh-path" value="data/master_summary.json">
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <button class="btn-action btn-dark" onclick="ghSaveSettings()">💾 บันทึก</button>
+        <button class="btn-action btn-green" onclick="ghFetch()">⬇️ ดึงข้อมูล</button>
+      </div>
+    </div>
+    <div style="margin-top:10px" id="gh-status-wrap"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px">
+      <p style="font-size:11px;color:#a0aec0;margin:0">⚠️ Token เก็บเฉพาะใน localStorage ของเครื่องนี้</p>
+      <div id="gh-sync-badge" style="font-size:11px;color:#718096;display:flex;align-items:center;gap:5px">
+        <span id="gh-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#cbd5e0;display:inline-block"></span>
+        <span id="gh-sync-label">ยังไม่ได้ sync</span>
+      </div>
+    </div>
+    </div><!-- end gh-form-wrap -->
+  </div>
+
+  <!-- Upload Payroll into Master -->
+  <div class="card">
+    <div class="card-title">➕ เพิ่มข้อมูลจาก Payroll ใหม่</div>
+    <div class="master-upload-box" id="ms-upload-box" onclick="document.getElementById('ms-file-input').click()">
+      <input type="file" id="ms-file-input" accept=".xlsx,.xls" multiple onchange="msHandleFiles(this.files)">
+      <div style="font-size:28px;margin-bottom:8px">📂</div>
+      <div style="font-size:13px;color:#718096">คลิกหรือลาก Payroll File มาวาง — ระบบจะแสดง Preview ก่อน Confirm</div>
+    </div>
+    <div class="diff-panel" id="ms-diff-panel"></div>
+
+  </div>
+
+
+  <!-- Compute from uploaded payroll (Daily workflow inside Master) -->
+  <div class="card" id="ms-gen-card" style="display:none">
+    <div style="display:none" id="btn-gen-dummy"></div>
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <div class="status-box" id="status-box" style="display:none;margin:0 0 16px"></div>
+
+  <!-- New Employee Panel -->
+  
+
+  <!-- Missing COM_MAP -->
+  
+
+  <!-- Single-date Preview & Edit -->
+  <!-- Branch-by-branch summary panel (shown before Daily Summary) -->
+  
+
+  
+
+  <!-- Multi-date preview panel -->
+  
+
+  <!-- Period bar -->
+  <div id="ms-period-bar" style="display:none" class="master-period-bar">
+    <div class="pb-item"><div class="pb-label">รอบบัญชี</div><div class="pb-val" id="ms-pb-period">—</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">วันที่มีข้อมูล</div><div class="pb-val" id="ms-pb-days">0 วัน</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">Commission รวม</div><div class="pb-val" id="ms-pb-com">฿0</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">OT/R/S รวม</div><div class="pb-val" id="ms-pb-extra">฿0</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">พนักงาน</div><div class="pb-val" id="ms-pb-emp">0</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-action btn-gray" onclick="openAllTotalModal()">📊 ยอดรวม</button>
+      <button class="btn-action btn-green" onclick="masterExportExcel()">📥 Export Excel</button>
+      <button class="btn-action" onclick="msClearAll()" style="background:#fed7d7;color:#c53030;border:none">🗑 ล้างข้อมูลทั้งหมด</button>
+    </div>
+  </div>
+
+  <!-- Calendar: Date Status -->
+  <div class="cal-card" id="ms-cal-card" style="display:none">
+    <div class="cal-title">📅 สถานะข้อมูลรายวัน — รอบบัญชีปัจจุบัน</div>
+    <div class="cal-grid" id="ms-cal-grid"></div>
+    <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#2d6a4f"></div>มีข้อมูลแล้ว</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f6ad55"></div>อัปเดตล่าสุด</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f0f4f8;border:1px solid #e2e8f0"></div>ยังไม่มีข้อมูล</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:white;outline:2px solid #f6ad55"></div>วันนี้</div>
+    </div>
+
+    <!-- Day Detail Panel (shown when clicking a date) -->
+    <div class="day-detail-panel" id="day-detail-panel">
+      <div class="day-detail-header">
+        <div class="day-detail-title" id="ddp-title">📋 —</div>
+        <div class="day-detail-actions">
+          <!-- ยอดรวม moved to period bar -->
+          <button class="btn-action btn-gray" id="ddp-btn-edit"   onclick="ddpToggleEdit()"   style="display:none">✏️ แก้ไข</button>
+          <button class="btn-action btn-green" id="ddp-btn-save"  onclick="ddpSave()"         style="display:none">💾 บันทึก</button>
+          <button class="btn-action btn-gray"  id="ddp-btn-cancel" onclick="ddpCancelEdit()"  style="display:none">✕ ยกเลิก</button>
+          <button class="btn-action" id="ddp-btn-delday" onclick="ddpDeleteDay()"
+            style="background:#fed7d7;color:#c53030;border:none;display:none">🗑 ลบทั้งวัน</button>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#a0aec0;margin-bottom:8px" id="ddp-hint" style="display:none">
+        ✏️ แก้ไขตัวเลขได้ในตาราง · ⠿ ลากแถวเพื่อเรียงลำดับ · 🗑 ลบรายคน
+      </p>
+      <div id="ddp-body"></div>
+    </div>
+  </div>
+
+  <!-- Empty -->
+  <div id="ms-empty" class="card">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <p>ยังไม่มีข้อมูล Master Summary<br>อัปโหลด Payroll File ด้านบน แล้วกด Confirm เพื่อบันทึก</p>
+    </div>
+  </div>
+
+</div>
+</div><!-- end tab-master -->
+
+<!-- All-Time Total Modal -->
+<div id="all-total-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeAllTotalModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAllTotalModal()">✕</button>
+    <div class="modal-title">📊 ยอดรวมทั้งหมด — ทุกวัน</div>
+    <div id="all-total-period" style="font-size:12px;color:#718096;margin-bottom:14px"></div>
+    <div style="overflow-x:auto">
+      <table class="all-total-tbl" id="all-total-tbl"></table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA: NICK_INFO, COM_MAP, OS_LEVEL, PAYROLL_NICK_MAP
+// ═══════════════════════════════════════════════════════
+
+const NICK_INFO = {
+  'Ae':{company:'Sinsub',level:'Silver'},
+  'App':{company:'Sinsub',level:'Basic'},
+  'Aris':{company:'Sinsub',level:'Silver'},
+  'BB':{company:'Sinsub',level:'OS'},
+  'BEW':{company:'Sukjai',level:'Silver'},
+  'Bam':{company:'Happines',level:'Silver'},
+  'Big':{company:'Sukjai',level:'OS'},
+  'Bua':{company:'Sinsub',level:'OS'},
+  'Cat':{company:'Sukjai',level:'OS'},
+  'Cha.':{company:'Sinsub',level:'Basic'},
+  'Chat':{company:'Sinsub',level:'Silver'},
+  'Cream':{company:'Sinsub',level:'Basic'},
+  'DA':{company:'Sinsub',level:'Silver'},
+  'Dee':{company:'Sinsub',level:'Silver'},
+  'Downy':{company:'Sinsub',level:'Basic'},
+  'Earn':{company:'Sukjai',level:'Basic'},
+  'Fern':{company:'Happines',level:'Basic'},
+  'Frame':{company:'Sinsub',level:'Silver'},
+  'JO':{company:'Sinsub',level:'Basic'},
+  'Jai':{company:'Sinsub',level:'Trainer'},
+  'Jang':{company:'Sinsub',level:'Basic'},
+  'Jar':{company:'Sinsub',level:'Silver'},
+  'Jasmine':{company:'Happines',level:'Silver'},
+  'Jeab':{company:'Sinsub',level:'Basic'},
+  'Jin':{company:'Sinsub',level:'Basic'},
+  'Jit':{company:'Sinsub',level:'Basic'},
+  'June':{company:'Sinsub',level:'Silver'},
+  'Kate':{company:'Sinsub',level:'Basic'},
+  'Koi':{company:'Sukjai',level:'Basic'},
+  'Korn':{company:'Sinsub',level:'Basic'},
+  'Kung':{company:'Sinsub',level:'Basic'},
+  'Lee':{company:'Sinsub',level:'Basic'},
+  'Lek':{company:'Sinsub',level:'Silver'},
+  'M':{company:'Sinsub',level:'Basic'},
+  'Mai':{company:'Sinsub',level:'Basic'},
+  'Mam':{company:'Sukjai',level:'Basic'},
+  'Manow':{company:'Sinsub',level:'Basic'},
+  'Meena':{company:'Sukjai',level:'Basic'},
+  'Mimi':{company:'Sukjai',level:'Basic'},
+  'Mint':{company:'Sukjai',level:'Basic'},
+  'Mook':{company:'Sukjai',level:'Basic'},
+  'Nai':{company:'Sinsub',level:'Silver'},
+  'Nattarika':{company:'?',level:'Basic'},
+  'Nang':{company:'Sinsub',level:'OS'},
+  'Nat':{company:'Sinsub',level:'Gold'},
+  'New':{company:'Sinsub',level:'Basic'},
+  'Nid':{company:'Sinsub',level:'Basic'},
+  'Ning':{company:'Sinsub',level:'Basic'},
+  'Nong':{company:'Sinsub',level:'Basic'},
+  'Noy':{company:'Sukjai',level:'Basic'},
+  'Oil':{company:'Sukjai',level:'Basic'},
+  'Olay':{company:'Sinsub',level:'Silver'},
+  'Ouan':{company:'Sinsub',level:'Silver'},
+  'PLERN':{company:'Sinsub',level:'Silver'},
+  'Pat':{company:'Sinsub',level:'Silver'},
+  'Paula':{company:'Sukjai',level:'Basic'},
+  'Pla':{company:'Sinsub',level:'Silver'},
+  'Por':{company:'Sukjai',level:'Basic'},
+  'Praew':{company:'Sinsub',level:'Basic'},
+  'Pu':{company:'Happines',level:'Trainer'},
+  'RAT':{company:'Sinsub',level:'Silver'},
+  'SU':{company:'Happines',level:'Basic'},
+  'Sa':{company:'Sinsub',level:'Silver'},
+  'Sai':{company:'Sukjai',level:'Basic'},
+  'So':{company:'Sinsub',level:'Basic'},
+  'Sorn':{company:'Sinsub',level:'Basic'},
+  'Sri':{company:'Sukjai',level:'Basic'},
+  'Taew':{company:'Sukjai',level:'Basic'},
+  'Tian':{company:'?',level:'Basic'},
+  'Tan':{company:'Sukjai',level:'Silver'},
+  'Tik':{company:'Sinsub',level:'Silver'},
+  'Tim':{company:'Sukjai',level:'Gold'},
+  'Wan':{company:'Sinsub',level:'Basic'},
+  'Wi':{company:'Sinsub',level:'Basic'},
+  'YUI':{company:'Sinsub',level:'OS'},
+  'Yard':{company:'Sukjai',level:'Gold'},
+  'Yaya':{company:'Sukjai',level:'Basic'},
+  'Ying':{company:'Sukjai',level:'Trainer'},
+  'Yo':{company:'Sinsub',level:'Silver'}
+};
+
+const OS_LEVEL = new Set(['BB','Big','Bua','Cat','Nang','YUI']);
+
+const PAYROLL_NICK_MAP = {
+  'Bew':'BEW', 'Cha':'Cha.', 'Jo':'JO', 'Pleon':'PLERN',
+  'Rat':'RAT', 'Su':'SU', 'Wan':'Wan', 'TikJiraphan':'Tik',
+  'Nut':'Nat',
+  'Nattarika':'Nattarika'
+};
+
+const COM_MAP = {
+  'Complimentary Food&Drink':0,
+  'Request (50Thb)':50,'Support (50Thb)':50,'Over Time (50 Bath)':50,
+  'Add On - Seasonal Milk Bath (30)(Couple)':50,
+  'Add On - Herbal Compress (30)':90,'Add On - Hand and Arm (30)':90,
+  'Add On - Body Scrub (30) + Shower (15)':90,'Add On - Foot Massage (30)':90,
+  'Add On - Neck & Shoulder Massage (30)':90,'Add On - Hot Stone (Neck, Back & Shoulder)(30)':90,
+  'Add On - Head Massage (30)':90,'Add On - Back Massage (30)':90,
+  'OS-Detax Facial Mask (30-min)':90,'OS-Lomi Lomi Massage (30-min)':90,
+  'OS-Fresh Herbal Compress (30-min)':90,'OS-Seitai Dry Massage (30-min)':90,
+  'OS-Spiritual Well-being (Sound Healing) 30-min':90,
+  'OS-Hot Stone Massage (30-min)':100,'OS Private Onsen (30 mins)':50,
+  'OS-GoWabi-Private Onsen Retreat Single (60 mins)':100,'OS-GoWabi-Private Onsen Retreat Couple (60 mins)':100,
+  'OS-Private Onsen Retreat Couple- 60 min':100,'OS-Private Onsen Retreat Single - 60 min':100,'OS-Private Onsen Retreat Single - 90 min':150,'OS-GoWabi-Private Onsen Retreat Single (90 mins)':150,
+  'OS-GoWabi-Private Onsen Retreat Couple (90 mins)':150,'OS-Klook-Private Onsen Retreat Couple (90 mins)':150,
+  'OS-Private Onsen Retreat Couple- 90 min':150,
+  'Luxe-Warm Oil Head Massage(60)':150,'Kids Spa-DEC24-Gentle Foot Care (60)':150,
+  'Kids Spa-DEC24-Little Relaxation (90)':270,'ClassPass-SEP25-WARM OIL HEAD MASSAGE (60)':180,
+  'Member-Kids Spa-Gentle Foot Care (60)':150,'Luxe-100% Pure Oil Massage (60)':180,
+  'Luxe-Organic Aromatherapy Oil Massage (60)':180,'Luxe-Four Hands 100% Pure Oil Massage(60)':180,
+  'Luxe-Four Hands Massage with Organic Aromatherapy(60)':180,'Luxe-DIORA Signature Body Scrub(60)':180,
+  'Luxe - Body Lotion Massage (60)':180,'Luxe- Anti Aging Facial (Gold collagen mask)':180,
+  'Mar2025-Luxe Thai Massage (60)':180,'Mar2025-Luxe Foot Massage (60)':180,
+  'OS-A Day Onsen Retreat 2 (60-min)':180,'OS-A Day Onsen Retreat 3 (60-min)':180,
+  'OS-Authentic Thai Massage (60-min)':180,'OS-Signature Body Scrub (45-min)':180,
+  'OS-Signature Foot Massage (60-min)':180,'OS-Signature Kung Fu Fusion Oil Massage (60-min)':180,
+  'OS-Signature Kung Fu Fusion Dry Massage (60-min)':180,'OS-Signature Lomi Lomi Massage (60-min)':180,
+  'OS-Signature Shiatsu Fusion Massage (60-min)':180,'OS-Signature Seitai Fusion Massage (60-min)':180,
+  'Office Relief - Neck, Shoulder & Back Massage(60)':180,
+  'Klook-JUL24-AROMA OIL MASSAGE (60)':180,'GoWabi-JUL24-Organic Aromatherapy Oil Massage (60)':180,
+  'KKDay-AROMATHERAPY OIL MASSAGE (60)':180,'KKDay-WARM OIL HEAD MASSAGE(60)':180,
+  'KLOOK-Traditional Thai Massage (60)':180,'ClassPass-SEP25-AROMATHERAPY OIL MASSAGE (60)':180,
+  'ClassPass-SEP25-DIORA SIGNATURE BODY SCRUB (60)':180,'GoWabi-JUL24-DIORA Signature Body Scrub (60)':180,
+  'Klook-JUL24-DIORA SIGNATURE BODY SCRUB (60)':180,'AROMA 60-MASALA WEDDING FAIR A-LaCart 2025':180,
+  'GoWabi-MAR-APR26-Luxe-Aromatherapy Oil Massage(60)':180,'ThaiHand-JUL24-DIORA SIGNATURE BODY SCRUB (60)':180,
+  'OS-Signature Japanese Hot Stone Massage (60-min)':200,'OS-PROMOTION Private Onsen 30 + MASSAGE 60 (90-min)':230,
+  'Luxe-Warm Oil Head Massage(90)':270,'Luxe-100% Pure Oil Massage (90)':270,
+  'Luxe-Organic Aromatherapy Oil Massage (90)':270,'Luxe-Four Hands 100% Pure Oil Massage(90)':270,
+  'Luxe-Four Hands Massage with Organic Aromatherapy(90)':270,
+  'Luxe-100% Pure Oil Massage with Fresh Herbal Compress (90)':270,
+  'Luxe - Thai Fusion Massage (90)':270,'Mar2025-Luxe Thai Massage (90)':270,
+  'Mar2025- Luxe Foot Massage (90)':270,'Mar2025-Luxe Thai Massage With Herbal Compress (90)':270,
+  'Mar2025-Luxe Foot Massage With Herbal Compress(90)':270,
+  'OS-A Day Onsen Retreat 1 (90-mins)':270,'OS-Authentic Thai Massage (90-min)':270,
+  'OS-Signature Foot Massage (90-min)':270,'OS-Signature Kung Fu Fusion Oil Massage (90-min)':270,
+  'OS-Signature Kung Fu Fusion Dry Massage (90-min)':270,'OS-Signature Lomi Lomi Massage (90-min)':270,
+  'OS-Signature Shiatsu Fusion Massage (90-min)':270,'OS-Signature Seitai Fusion Massage (90-min)':270,
+  'OS-Guasa Facial Treatment (90-min)':270,'OS-POM-FEB-JUN26 A day Onsen (90-min)':270,
+  'OS-Klook-A Day Onsen Retreat 1 (90-mins)':270,
+  'OS-Dry or Oil Massage With Fresh Herbal Compress (90-min)':270,
+  'Office Stress Relief(90)':270,'DIORA Beauty Express I(90)':270,'DIORA Beauty Express II (90)':270,
+  'Klook-JUL24-AROMA OIL MASSAGE (90)':270,'GoWabi-JUL24-Organic Aromatherapy Oil Massage(90)':270,
+  'KKDay-AROMATHERAPY OIL MASSAGE (90)':270,'KKDay-100% PURE OIL MASSAGE (90)':270,
+  'ClassPass-SEP25-AROMATHERAPY OIL MASSAGE (90)':270,
+  'ClassPass-SEP25-100% PURE OIL MASSAGE WITH HERBAL BALL (90)':270,
+  'ClassPass-SEP25-DIORA Beauty Express PKG II (90)':270,'ClassPass-SEP25-DIORA Beauty Express PKG I (90)':270,
+  'ClassPass-SEP25-FOUR HANDS AROMATHERAPY OIL MASSAGE (90)':270,
+  'CLASSPASS-JAN25-SIGNATURE ORGANIC OIL MASSAGE (90)':270,
+  'Klook-JUL24-100% PURE OIL MASSAGE WITH HERBAL BALL (90)':270,
+  'GoWabi-JUL24-100% Pure Oil Massage with Herbal Compress (90)':270,
+  'TRIP-Organic Aromatherapy Oil Massage (90)':270,'TRIP-100% Pure Oil Massage (90)':270,
+  'ThaiHand-JUL24-AROMA OIL MASSAGE (90)':270,'GoWabi-JUL24-Warm Oil Head Massage (90)':270,
+  'Luxe - Body Lotion Massage (90)':270,'Member-Kids Spa-Little Relaxation (90)':270,
+  'AS-FEB-JUN26-Aroma Oil Massage (90) + Free massage (30)':360,
+  'ThaiHand-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (90)':300,
+  'Luxe-Organic Aromatherapy/100% Pure Oil with Hot Stone(90)':300,
+  'GoWabi-JUL24-Organic Aroma Oil Massage with Hot Stone(90)':300,
+  'GOWABI-JAN25-SIGNATURE ORGANIC OIL MASSAGE WITH HOT STONE (90)':300,
+  'KKDay-ORGANIC AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE(90)':300,
+  'Klook-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (90)':300,
+  'ClassPass-SEP25-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (90)':300,
+  'TRIP-Organic Aromatherapy/100% Pure Oil with Hot Stone(90)':300,
+  'OS-Signature Japanese Hot Stone Massage (90-min)':300,
+  'Luxe-100% Pure Oil Massage (120)':360,'Luxe-Organic Aromatherapy Oil Massage (120)':360,
+  'Luxe-Four Hands 100% Pure Oil Massage(120)':360,
+  'Luxe-Four Hands Massage with Organic Aromatherapy Oil Massage(120))':360,
+  'Luxe-100% Pure Oil Massage with Fresh Herbal Compress (120)':360,
+  'Luxe - Thai Fusion  Massage (120)':360,'Mar2025-Luxe Thai Massage (120)':360,
+  'Mar2025-Luxe Foot Massage (120)':360,'Mar2025-Luxe Thai Massage With Herbal Compress  (120)':360,
+  'Mar2025-Luxe Foot Massage With Herbal Compress (120)':360,
+  'LS Four Hands Massage with 100% Pure Oil (120)':360,
+  'Klook-JUL24-AROMA OIL MASSAGE (120)':360,'Klook-JUL24-100% PURE OIL MASSAGE WITH HERBAL BALL (120)':360,
+  'GoWabi-JUL24-100% Pure Oil Massage with Herbal Compress (120)':360,
+  'Early Bird-FEB-APR26-Thai Fusion Massage (120)':360,'15%OFF-NOV25-Thai Fusion Massage(120)':360,
+  'Kids Spa-DEC24-Mommy&Me (120)':360,'Kids Spa-DEC24-You Are My Angel (120)':360,
+  'Early Bird-100% Pure Oil/ Organic Aromatherapy Oil massage with Hot Stone (120) Free Massage Oil':400,
+  '[Exclusive Offer] Organic Aromatherapy Oil Massage 90 Mins Get Free Foot Massage or Neck & Shoulder Massage 30 Mins':360,
+  '[Exclusive Offer] Organic Aromatherapy Oil Massage 120 Mins Get Free Foot Massage or Neck & Shoulder Massage 30 Mins':450,
+  'FEB-APR26-Aroma Oil Massage (120) + (Foot or Neck & Shoulder Massage)(30)':450,
+  'Luxe-Organic Aromatherapy/100% Pure Oil with Hot Stone(120)':400,
+  'Klook-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (120)':400,
+  'GoWabi-JUL24-Organic Aroma Oil Massage with Hot Stone (120)':400,
+  'KKDay-ORGANIC AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE(120)':400,
+  'ClassPass-SEP25-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (120)':400,
+  'ThaiHand-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (120)':400,
+  '10%OFF-NOV25-100% Pure Oil/Aromatherapy Oil Massage with Hot Stone (120)':400,
+  'DIORA HEVENLY BLISS I (150)':435,'DIORA HEVENLY BLISS II (150)':435,
+  'GoWabi-JUL24-DIORA Heavenly Bliss (II) (150)':435,'DIORA Blissful Retreat (150)':480,
+  'OS-GoWabi-Sensory Heaven Onsen Package Couple (180-Minute)':460,
+  'OS-Klook-Sensory Heaven Onsen Package Couple (180-Minute)':460,
+  'OS-Klook-Rebalance Jet lag kung Fu Couple Package (180-Minute)':460,
+  'OS-Sensory Heaven Onsen Package Couple (180-min)':460,'OS-Sensory Heaven Onsen Package (180-min)':460,
+  'OS-Rebalance Jet Lag Kung Fu Package (180-min)':460,'OS-Rebalance Jet Lag Kung Fu Package Couple (180-min)':460,
+  'Jet Lag Recovery Package A (180)':495,'Jet Lag Recovery Package B (180)':495,
+  'KLOOK-15%OFF-JET LAG RECOVERY B(180)':495,
+  'DIORA Remedy I (180)':540,'DIORA Silk Secret 1 (180)':540,'DIORA Silk Secret II (180)':540,
+  'KLOOK-30%OFF-MAR-APR26-DIORA SILK SECRET II (180)':540,'Klook-JUL24-DIORA SILK SECRET I (180)':540,
+  'KLOOK-WEEKDAY-DEC25 BUY1GET2 SILK SECRET II':540,
+  'OS-The Sound of Japanese Furin Touches of Heart Package 1 (195-min)':550,
+  'OS-The Sound of Japanese Furin Touches of Heart Package 1 Couple (195-min)':550,
+  'OS-Klook-The Sound of Japanese Furin Touches of Heart Package 1 Couple (195-Minute)':550,
+  'OS-The Sound of Japanese Furin Touches of Heart Package 2 Couple  (150-min)':370,
+  'OS-GoWabi-The Sound of Japanese Furin Touches of Heart Package 2 Couple (150-Minute)':370,
+  'B1G1-MAR26-DIORA DEEP RELIEF(180)':570,'KLOOK-B1G1-MAR26-DIORA DEEP RELIEF(180)':570,
+  '20%OFF-NOV25-DIORA Deep Relief (180)':570,'DIORA Journey On Foot II (210)':570,
+  'DIORA Remedy II (180)':580,'Klook-JUL24-DIORA REMEDY II (180)':580,
+  'DIORA Journey On Foot I (210)':600,'GoWabi-JUL24-DIORA Journey On Foot Package (I) (210)':600,
+  'DIORA Essence of Warmth I (210)':630,'OS-Energizing of Life Package':640,
+  'OS-Energizing of Life Package Couple (255-min)':640,
+  'DIORA Essence of Warmth II (210)':670,'TRIP-DIORA ESSENCE OF WARMTH II (210)':670,
+  'DIORA Duet Indulge I (240)':690,'Klook-JUL24-DIORA DUET INDULGE II (240)':730,
+  'DIORA Duet Indulge II (240)':730,'KLOOK-JAN25-DIORA DUET INDULGE Package B (240)':730,
+  'DIORA Temple of Dreams I (300)':870,'DIORA Temple of Dreams II (300)':910,
+  'OS-Signature Ultimate Bathing Ritual Package':920,
+  'OS-Klook-Signature Ultimate Bathing Ritual Package (405-Minute)':920,
+  'OS-Signature Ultimate Bathing Ritual Couple Package':920,
+};
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const payrollFiles = [];
+let comMapExtra = {};
+let pendingMissingRates = {};
+let allRawRecords = [];       // raw parsed records from payroll files
+let dailySummaryRows = [];    // [{nick, fullName, company, level, LS, AS, SK, LP, OS, R, OT, S, Level, Tip, isOsLevel}]
+let masterRecords = [];       // accumulated per-employee-per-day records for master
+let msDirty = false;
+
+// ── Branch Detail Table edit state ──────────────────────
+// _bdtEdits[br] = { masterIndex: { field: newValue, ... }, ... }
+let _bdtEdits    = {};   // pending edits per branch
+let _bdtEditing  = {};   // { br: true/false } — which branches are in edit mode
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+function getNick(therapist) {
+  const s = String(therapist || '');
+
+  // Build a case-insensitive lookup against PAYROLL_NICK_MAP then NICK_INFO
+  function resolve(raw) {
+    if (!raw) return raw;
+    // 1. Exact match in PAYROLL_NICK_MAP
+    if (PAYROLL_NICK_MAP[raw]) return PAYROLL_NICK_MAP[raw];
+    // 2. Case-insensitive match in PAYROLL_NICK_MAP
+    const rawL = raw.toLowerCase();
+    for (const k of Object.keys(PAYROLL_NICK_MAP)) {
+      if (k.toLowerCase() === rawL) return PAYROLL_NICK_MAP[k];
+    }
+    // 3. Exact match in NICK_INFO
+    if (NICK_INFO[raw]) return raw;
+    // 4. Case-insensitive match in NICK_INFO
+    for (const k of Object.keys(NICK_INFO)) {
+      if (k.toLowerCase() === rawL) return k;
+    }
+    return raw;
+  }
+
+  // Split a CamelCase/PascalCase string at the first internal capital boundary
+  // e.g. "TikJiraphan" → "Tik", "JaneSmith" → "Jane"
+  // All-caps words (BB, DA, JO, BEW, PLERN) are returned as-is — no splitting
+  function splitCamel(w) {
+    if (/^[A-Z]+$/.test(w)) return w; // all-caps nick like BB, DA, BEW
+    const m = w.match(/^([A-Z][a-z]+)/); // PascalCase: take first capitalised word
+    return m ? m[0] : w;
+  }
+
+  // Format: "Full Name (Nick)" or "Full Name (NickSurname)" — closing paren present
+  const m = s.match(/\(([^)]+)\)/);
+  if (m) {
+    const raw = m[1].trim().split(/\s+/)[0]; // first word inside parens
+    return resolve(splitCamel(raw));
+  }
+
+  // Format: "(NickSurname..." — missing closing paren
+  const m2 = s.match(/^\(([A-Za-z]+)/);
+  if (m2) return resolve(splitCamel(m2[1].trim()));
+
+  // Fallback: first word of the full string
+  const first = s.trim().split(/\s+/)[0];
+  return resolve(splitCamel(first));
+}
+
+function isOsItem(item) {
+  return /\bOS[-\s]|\bONSEN\b/i.test(item);
+}
+function isOsLevelNick(nick) {
+  return OS_LEVEL.has(nick);
+}
+function classifyType(item) {
+  if (!item) return 'Com';
+  if (/\bRequest\b/i.test(item)) return 'R';
+  if (/\bSupport\b/i.test(item)) return 'S';
+  if (/Over\s*Time/i.test(item)) return 'OT';
+  return 'Com';
+}
+function getEffectiveMap() {
+  return Object.assign({}, COM_MAP, comMapExtra);
+}
+function parseSaleDate(val) {
+  if (!val) return null;
+  // Date object from XLSX cellDates:true — extract local date parts to avoid UTC shift
+  if (val instanceof Date) {
+    if (isNaN(val)) return null;
+    return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+  }
+  const s = String(val).trim();
+  // DD/MM/YYYY or D/M/YY
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m) {
+    let yr = parseInt(m[3]);
+    if (yr < 100) yr += 2000;
+    return new Date(yr, parseInt(m[2]) - 1, parseInt(m[1]));
+  }
+  // YYYY-MM-DD
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m2) return new Date(parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
+  // Excel serial number
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const d = new Date(val);
+  return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dd = d instanceof Date ? d : new Date(d);
+  return dd.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+function fmtDateShort(d) {
+  const dd = d instanceof Date ? d : new Date(d);
+  return `${dd.getDate()}/${dd.getMonth()+1}/${dd.getFullYear()}`;
+}
+function dateToISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function numFmt(n) {
+  return n ? n.toLocaleString() : '';
+}
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+function detectPeriod(dates) {
+  if (!dates || !dates.length) {
+    const now = new Date();
+    return { startDate: new Date(now.getFullYear(), now.getMonth()-1, 21), endDate: new Date(now.getFullYear(), now.getMonth(), 20) };
+  }
+  let minDate = dates.reduce((a,b) => a < b ? a : b);
+  let startYear = minDate.getFullYear(), startMonth = minDate.getMonth();
+  if (minDate.getDate() < 21) {
+    startMonth--;
+    if (startMonth < 0) { startMonth = 11; startYear--; }
+  }
+  const startDate = new Date(startYear, startMonth, 21);
+  let endMonth = startMonth + 1, endYear = startYear;
+  if (endMonth > 11) { endMonth = 0; endYear++; }
+  return { startDate, endDate: new Date(endYear, endMonth, 20) };
+}
+function getCoKey(company) {
+  const c = (company||'').toLowerCase();
+  if (c === 'sinsub') return 'sinsub';
+  if (c === 'sukjai') return 'sukjai';
+  if (c === 'happines') return 'happines';
+  return 'unknown';
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILE UPLOAD — DAILY TAB
+// ═══════════════════════════════════════════════════════
+function handlePayrollFiles(fileList) {
+  for (const f of fileList) {
+    if (!payrollFiles.find(x => x.name === f.name)) payrollFiles.push(f);
+  }
+  renderPayrollList();
+}
+function removePayrollFile(fname) {
+  const idx = payrollFiles.findIndex(f => f.name === fname);
+  if (idx >= 0) payrollFiles.splice(idx, 1);
+  renderPayrollList();
+}
+function renderPayrollList() {
+  const box = document.getElementById('py-upload-box');
+  const list = document.getElementById('py-file-list');
+  const badge = document.getElementById('py-date-badge');
+  const addMore = document.getElementById('py-add-more');
+  if (!list || !badge || !box || !addMore) return; // tab-daily not in DOM
+  list.innerHTML = '';
+  badge.innerHTML = '';
+  if (!payrollFiles.length) {
+    box.classList.remove('has-files'); addMore.style.display = 'none'; return;
+  }
+  box.classList.add('has-files'); addMore.style.display = '';
+  for (const f of payrollFiles) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="fname">📄 ${f.name}</span><span class="fsize">${(f.size/1024).toFixed(0)} KB</span><span class="fdel" onclick="event.stopPropagation();removePayrollFile('${f.name.replace(/'/g,"\\'")}')">✕</span>`;
+    list.appendChild(li);
+  }
+  // show date range async
+  scanPayrollDates(payrollFiles).then(dates => {
+    if (!dates.length) return;
+    dates.sort((a,b)=>a-b);
+    const fmt = d => d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const rangeStr = dates[0].getTime()===dates[dates.length-1].getTime()
+      ? fmt(dates[0]) : `${fmt(dates[0])} – ${fmt(dates[dates.length-1])}`;
+    const { startDate, endDate } = detectPeriod(dates);
+    const inPeriod = dates.every(d => d >= startDate && d <= endDate);
+    badge.innerHTML = `<span class="date-badge${inPeriod?'':' warn'}">${inPeriod?'📅':'⚠️'} ${payrollFiles.length} ไฟล์ · ${rangeStr}</span>`;
+  });
+}
+
+// ── Parse Invoice/Payroll Excel file → [{fullName, item, saleDate, branch, inv, comVal}] ──
+async function parsePayrollFile(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        let hdrIdx = -1;
+        for (let i = 0; i < Math.min(8, rows.length); i++) {
+          const r = rows[i].map(c => String(c));
+          if (r.includes('Employee Name') || r.includes('Commission')) { hdrIdx = i; break; }
+        }
+        if (hdrIdx < 0) { resolve([]); return; }
+
+        // Extract declared payroll period from header rows (e.g. row 3:
+        // "Employee Payroll From: 21 Apr 2026 To: 20 May 2026")
+        let declaredFrom = null, declaredTo = null;
+        for (let i = 0; i < hdrIdx; i++) {
+          const rowStr = rows[i].map(c => String(c)).join(' ');
+          const m = rowStr.match(/From[:\s]+([\d]{1,2}[\s\/\-][A-Za-z]+[\s\/\-][\d]{4})\s+To[:\s]+([\d]{1,2}[\s\/\-][A-Za-z]+[\s\/\-][\d]{4})/i);
+          if (m) {
+            const d1 = new Date(m[1]); const d2 = new Date(m[2]);
+            if (!isNaN(d1)) declaredFrom = d1;
+            if (!isNaN(d2)) declaredTo   = d2;
+            break;
+          }
+        }
+        const headers = rows[hdrIdx].map(h => String(h).trim());
+        const iJob  = headers.indexOf('Job');
+        const iName = headers.indexOf('Employee Name');
+        const iItem = headers.indexOf('Item');
+        const iInv  = headers.indexOf('Invoice No');
+        const iDate = headers.indexOf('Service Date');
+        const iCom  = headers.indexOf('Commission');
+
+        const records = [];
+        for (let r = hdrIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (String(row[iJob] || '').trim().toUpperCase() !== 'THERAPIST') continue;
+          const fullName = String(row[iName] || '').trim();
+          if (!fullName || /z_dumm/i.test(fullName)) continue;
+          const item   = String(row[iItem] || '').trim();
+          const inv    = String(row[iInv]  || '').trim();
+          const comVal = parseFloat(String(row[iCom] || '0').replace(/,/g, '')) || 0;
+          const saleDate = parseSaleDate(row[iDate]);
+          if (!saleDate || isNaN(saleDate)) continue;
+          let branch;
+          if      (inv.startsWith('LS')) branch = 'LS';
+          else if (inv.startsWith('AS')) branch = 'AS';
+          else if (inv.startsWith('SK')) branch = 'SK';
+          else if (inv.startsWith('OS')) branch = 'OS';
+          else if (inv.startsWith('LP')) {
+            // LP invoice with OS item → Onsen branch
+            branch = item.startsWith('OS') ? 'OS' : 'LP';
+          }
+          else branch = '?';
+          // For OS branch: if Commission column is 0, look up fixed rate from COM_MAP
+          let finalComVal = comVal;
+          if (branch === 'OS' && finalComVal === 0) {
+            const map = getEffectiveMap();
+            if (map[item]) finalComVal = map[item];
+          }
+          // OS-level employees are salary-based — commission always 0
+          const nick_check = getNick(fullName);
+          const effectiveComVal = isOsLevelNick(nick_check) ? 0 : finalComVal;
+          records.push({ fullName, item, saleDate, branch, inv, comVal: effectiveComVal });
+        }
+        resolve({ records, declaredFrom, declaredTo });
+      } catch(err) {
+        console.error('[DIORA] parsePayrollFile error:', err);
+        resolve([]);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── Scan all payroll files to collect unique service dates ──
+async function scanPayrollDates(files) {
+  const allDates = [];
+  for (const file of files) {
+    await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+          let sdCol = -1;
+          for (let i = 0; i < Math.min(8, rows.length); i++) {
+            const idx = rows[i].findIndex(c => String(c).toLowerCase().includes('service date'));
+            if (idx >= 0) { sdCol = idx; break; }
+          }
+          if (sdCol >= 0) {
+            for (const row of rows) {
+              const val = row[sdCol];
+              if (!val || String(val).toLowerCase().includes('service')) continue;
+              const d = parseSaleDate(val);
+              if (d && !isNaN(d)) allDates.push(d);
+            }
+          }
+        } catch(e) {}
+        resolve();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+  return allDates;
+}
+
+// ═══════════════════════════════════════════════════════
+//  GENERATE DAILY SUMMARY
+// ═══════════════════════════════════════════════════════
+async function startGenerate() {
+  if (!payrollFiles.length) { showStatus('error','⚠️ กรุณาอัปโหลด Payroll file ก่อน'); return; }
+  const btn = document.getElementById('btn-gen');
+  if (btn) btn.disabled = true;
+  showProgress(5);
+  showStatus('info','⏳ กำลังอ่านไฟล์ Payroll...');
+  allRawRecords = [];
+  for (let i=0; i<payrollFiles.length; i++) {
+    const result = await parsePayrollFile(payrollFiles[i]);
+    const recs = result.records || result; // parsePayrollFile returns {records, declaredFrom, declaredTo}
+    allRawRecords.push(...recs);
+    showProgress(10 + (i+1)/payrollFiles.length * 50);
+  }
+  if (!allRawRecords.length) {
+    showStatus('error','❌ ไม่พบข้อมูล Therapist ในไฟล์ที่เลือก'); if(btn) btn.disabled = false; return;
+  }
+  const uniqueDays = new Set(allRawRecords.map(r => r.saleDate instanceof Date ? dateToISO(r.saleDate) : null).filter(Boolean)).size;
+  showStatus('info',`✅ อ่านไฟล์เสร็จ — ${allRawRecords.length} records · ${uniqueDays} วัน\n⏳ กำลังตรวจสอบ COM_MAP...`);
+  showProgress(65);
+
+  showProgress(80);
+  buildDailySummary();
+  if (btn) btn.disabled = false;
+}
+
+// ── Helper: build per-nick summary rows from a set of raw records ──
+function _buildRowsFromRecs(recs) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const byNick = {};
+  const nickFullName = {};
+  for (const rec of recs) {
+    const nick  = getNick(rec.fullName);
+    const typ   = classifyType(rec.item);
+    const osLvl = isOsLevelNick(nick);
+    const comVal = rec.comVal || 0;
+    if (!byNick[nick]) {
+      const init = {LS:0,AS:0,SK:0,LP:0,OS:0,R:0,OT:0,S:0,Level:0,Tip:0,isOsLevel:osLvl};
+      // per-branch breakdown for OT/R/S
+      for (const b of BRANCHES) { init['OT_'+b]=0; init['R_'+b]=0; init['S_'+b]=0; }
+      byNick[nick] = init;
+    }
+    nickFullName[nick] = rec.fullName;
+    const br = rec.branch && BRANCHES.includes(rec.branch) ? rec.branch : null;
+    if (typ === 'R')  { byNick[nick].R += comVal; if (br) byNick[nick]['R_'+br]  += comVal; }
+    else if (typ === 'OT') { byNick[nick].OT += comVal; if (br) byNick[nick]['OT_'+br] += comVal; }
+    else if (typ === 'S')  { byNick[nick].S  += comVal; if (br) byNick[nick]['S_'+br]  += comVal; }
+    else { if (br) byNick[nick][br] += comVal; }
+  }
+  return Object.keys(byNick).sort().map(nick => {
+    const d = byNick[nick]; const info = NICK_INFO[nick];
+    const row = { nick, fullName: nickFullName[nick]||nick,
+      company: info?info.company:'?', level: info?info.level:'?',
+      LS:d.LS,AS:d.AS,SK:d.SK,LP:d.LP,OS:d.OS,
+      R:d.R,OT:d.OT,S:d.S,Level:0,Tip:0,isOsLevel:d.isOsLevel };
+    for (const b of BRANCHES) { row['OT_'+b]=d['OT_'+b]; row['R_'+b]=d['R_'+b]; row['S_'+b]=d['S_'+b]; }
+    return row;
+  });
+}
+
+// ── Stored multi-date data for confirm-all ──
+let _mdAllRecs = null;  // { iso: [masterRecord, ...] }
+
+function buildDailySummary() {
+  // Group raw records by ISO date
+  const byDate = {};
+  for (const rec of allRawRecords) {
+    const iso = rec.saleDate instanceof Date && !isNaN(rec.saleDate)
+      ? dateToISO(rec.saleDate) : null;
+    if (!iso) continue;
+    if (!byDate[iso]) byDate[iso] = [];
+    byDate[iso].push(rec);
+  }
+  const sortedDates = Object.keys(byDate).sort();
+
+  if (sortedDates.length === 0) {
+    showStatus('error','❌ ไม่พบข้อมูลที่ parse ได้'); showProgress(0); return;
+  }
+
+  showProgress(100);
+
+  // ── Single date: existing flow ──────────────────────────
+  if (sortedDates.length === 1) {
+    const iso = sortedDates[0];
+    dailySummaryRows = _buildRowsFromRecs(byDate[iso]);
+    document.getElementById('ds-date-label').textContent = _isoToThai(iso);
+    showStatus('success',`✅ สร้าง Daily Summary เสร็จ — ${dailySummaryRows.length} พนักงาน\nตรวจสอบและแก้ไขได้ในตารางด้านล่าง จากนั้นกด Confirm เพื่อบันทึกลง Master`);
+    document.getElementById('multidate-panel').style.display = 'none';
+    // Also hide Day Detail Panel — stale master data should not show during preview
+    document.getElementById('day-detail-panel').style.display = 'none';
+    _ddpIso = null;
+    renderBranchSummary(dailySummaryRows, iso);
+    renderDailyTable(); dsInitDrag();
+    document.getElementById('daily-summary-panel').style.display = '';
+    document.getElementById('branch-summary-panel').scrollIntoView({behavior:'smooth'});
+    showProgress(0);
+    return;
+  }
+
+  // ── Multi-date: build all records & show preview ─────────
+  document.getElementById('daily-summary-panel').style.display = 'none';
+  document.getElementById('branch-summary-panel').style.display = 'none';
+  // Hide Day Detail Panel during preview
+  document.getElementById('day-detail-panel').style.display = 'none';
+  _ddpIso = null;
+
+  // Build master records per date
+  _mdAllRecs = {};
+  let grandTotal = 0;
+  const allNicks = new Set();
+  for (const iso of sortedDates) {
+    const rows = _buildRowsFromRecs(byDate[iso]);
+    const FIELDS = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+    const _BLIST = ['LS','AS','SK','LP','OS'];
+    _mdAllRecs[iso] = rows.map(row => {
+      const rec = {
+        id: genId(), date: iso,
+        nick: row.nick, fullName: row.fullName,
+        company: row.company, level: row.level,
+        LS:row.LS,AS:row.AS,SK:row.SK,LP:row.LP,OS:row.OS,
+        R:row.R,OT:row.OT,S:row.S,Level:0,Tip:0,
+        isOsLevel:row.isOsLevel, note:'',
+        source: payrollFiles.map(f=>f.name).join(', '),
+      };
+      for (const b of _BLIST) { rec['OT_'+b]=row['OT_'+b]||0; rec['R_'+b]=row['R_'+b]||0; rec['S_'+b]=row['S_'+b]||0; }
+      return rec;
+    });
+    _mdAllRecs[iso].forEach(r => {
+      grandTotal += ['LS','AS','SK','LP','OS','OT','R','S'].reduce((s,f)=>s+(r[f]||0),0);
+      allNicks.add(r.nick);
+    });
+  }
+
+  // Existing keys in master for dup detection
+  const existKeys = new Set(masterRecords.map(r => r.date+'|'+r.nick));
+
+  // Range label
+  const d0 = sortedDates[0], d1 = sortedDates[sortedDates.length-1];
+  document.getElementById('md-range-label').textContent =
+    `${_isoToThai(d0)} – ${_isoToThai(d1)}`;
+  document.getElementById('md-stat-days').textContent  = sortedDates.length;
+  document.getElementById('md-stat-emp').textContent   = allNicks.size;
+  document.getElementById('md-stat-total').textContent = grandTotal.toLocaleString();
+
+  // Render day cards
+  const grid = document.getElementById('md-grid');
+  grid.innerHTML = sortedDates.map(iso => {
+    const recs = _mdAllRecs[iso];
+    const dayTotal = recs.reduce((s,r)=>s+['LS','AS','SK','LP','OS','OT','R','S'].reduce((a,f)=>a+(r[f]||0),0),0);
+    const hasDup   = recs.some(r => existKeys.has(iso+'|'+r.nick));
+    // Branch summary: show which branches have data and their totals
+    const BLIST = ['LS','AS','SK','LP','OS'];
+    const brSummary = BLIST.map(b => {
+      const bTotal = recs.reduce((s,r) => s+(r[b]||0), 0);
+      return bTotal > 0 ? `<span style="font-size:10px;background:rgba(255,255,255,0.25);border-radius:4px;padding:1px 5px;font-weight:600">${b}</span>` : '';
+    }).filter(Boolean).join('<span style="color:rgba(255,255,255,0.4);margin:0 1px">·</span>');
+    return `<div class="md-day-card${hasDup?' dup-warn':''}" style="cursor:default">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1" onclick="event.stopPropagation()">
+          <input type="checkbox" class="md-day-check" data-iso="${iso}" checked
+            style="width:15px;height:15px;cursor:pointer;accent-color:#276749"
+            onchange="_mdUpdateStats()">
+          <span style="font-size:12px;font-weight:700;color:#1a202c">📅 ${_isoToThai(iso)}</span>
+        </label>
+        <span class="md-day-badge ${hasDup?'dup':'new'}" style="position:static;margin:0">${hasDup?'replace':'new'}</span>
+      </div>
+      <div style="font-size:11px;color:#4a5568;margin:4px 0 2px">${recs.length} คน · ฿${dayTotal.toLocaleString()}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${brSummary}</div>
+    </div>`;
+  }).join('');
+
+  const panel = document.getElementById('multidate-panel');
+  panel.style.display = '';
+  panel.scrollIntoView({behavior:'smooth'});
+  showStatus('success',`✅ พบข้อมูล ${sortedDates.length} วัน — ${allNicks.size} พนักงาน · ฿${grandTotal.toLocaleString()}\nตรวจสอบรายวันในการ์ดด้านล่าง แล้วกด Confirm ทั้งหมด`);
+  showProgress(0);
+}
+
+function _mdUpdateStats() {
+  if (!_mdAllRecs) return;
+  const checked = [...document.querySelectorAll('.md-day-check:checked')].map(el => el.dataset.iso);
+  const checkedSet = new Set(checked);
+  const allNicks = new Set();
+  let total = 0, days = 0;
+  for (const iso of Object.keys(_mdAllRecs)) {
+    if (!checkedSet.has(iso)) continue;
+    days++;
+    _mdAllRecs[iso].forEach(r => {
+      allNicks.add(r.nick);
+      total += ['LS','AS','SK','LP','OS','OT','R','S'].reduce((s,f)=>s+(r[f]||0),0);
+    });
+  }
+  document.getElementById('md-stat-days').textContent  = days;
+  document.getElementById('md-stat-emp').textContent   = allNicks.size;
+  document.getElementById('md-stat-total').textContent = total.toLocaleString();
+}
+
+function confirmAllToMaster() {
+  if (!_mdAllRecs) return;
+  // Only confirm checked dates
+  const checked = new Set([...document.querySelectorAll('.md-day-check:checked')].map(el => el.dataset.iso));
+  if (!checked.size) { showStatus('error','❌ ไม่มีวันที่เลือก — กรุณาเลือกอย่างน้อย 1 วัน'); return; }
+  const allNewRecs = Object.entries(_mdAllRecs)
+    .filter(([iso]) => checked.has(iso))
+    .flatMap(([, recs]) => recs);
+  if (!allNewRecs.length) return;
+
+  // Full-day replace for checked dates
+  const removeDates = new Set(allNewRecs.flatMap(r => (r.date||'').split(',').map(s=>s.trim())));
+  masterRecords = masterRecords.filter(r =>
+    !(r.date||'').split(',').map(s=>s.trim()).some(d => removeDates.has(d))
+  );
+  masterRecords.push(...allNewRecs);
+  msSaveLocal();
+  msDirty = true;
+
+  const newDates = new Set(allNewRecs.map(r => r.date));
+  showStatus('success',`✅ บันทึกลง Master แล้ว — ${checked.size} วัน · ${allNewRecs.length} records`);
+  document.getElementById('multidate-panel').style.display = 'none';
+  _mdAllRecs = null;
+
+  switchTab('master');
+  msRefreshUI(newDates);
+  ghSilentPushIfConfigured();
+}
+
+// ── Branch-by-branch summary table (shown above Daily Summary) ──
+function renderBranchSummary(rows, isoDate) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const BRANCH_LABEL = {LS:'Langsuan : LS', AS:'Asoke : AS', SK:'Sukhumvit : SK', LP:'Lumpini : LP', OS:'Onsen : OS'};
+
+  document.getElementById('bs-date-label').textContent = _isoToThai(isoDate);
+  const wrap = document.getElementById('branch-tables-wrap');
+  let html = '';
+
+  for (const br of BRANCHES) {
+    // Include rows that have Com in this branch OR OT/R/S in this branch
+    const brRows = rows.filter(r => (r[br]||0) > 0 || (r['OT_'+br]||0) > 0 || (r['R_'+br]||0) > 0 || (r['S_'+br]||0) > 0);
+    if (!brRows.length) continue;
+
+    let tCom = 0, tOT = 0, tR = 0, tS = 0, tLvl = 0, tTip = 0;
+    let rowsHtml = '';
+    for (let i = 0; i < brRows.length; i++) {
+      const r = brRows[i];
+      const com = r[br] || 0;
+      const ot  = r['OT_'+br] || 0;
+      const req = r['R_'+br]  || 0;
+      const sup = r['S_'+br]  || 0;
+      const tot = com + ot + req + sup + (r.Level||0) + (r.Tip||0);
+      tCom += com; tOT += ot; tR += req; tS += sup; tLvl += (r.Level||0); tTip += (r.Tip||0);
+      rowsHtml += `<tr>
+        <td style="text-align:center;color:#718096">${i+1}</td>
+        <td><strong>${r.nick}</strong></td>
+        <td style="color:#718096;font-size:11px">${r.fullName}</td>
+        <td class="num">${com ? com.toLocaleString() : ''}</td>
+        <td class="num" style="color:#718096">${r.level||''}</td>
+        <td class="num">${ot  ? ot.toLocaleString()  : ''}</td>
+        <td class="num">${req ? req.toLocaleString() : ''}</td>
+        <td class="num">${sup ? sup.toLocaleString() : ''}</td>
+        <td class="num" style="font-weight:700">${tot ? tot.toLocaleString() : ''}</td>
+      </tr>`;
+    }
+    const grandTot = tCom + tOT + tR + tS + tLvl + tTip;
+    html += `<div class="branch-section">
+      <div class="branch-section-title branch-title-${br}">${BRANCH_LABEL[br]}</div>
+      <div style="overflow-x:auto">
+      <table class="branch-tbl">
+        <thead><tr>
+          <th style="width:32px">No</th>
+          <th class="th-left" style="min-width:70px">Nick</th>
+          <th class="th-left" style="min-width:140px">Name</th>
+          <th>Com</th><th>Level</th><th>OT</th><th>R</th><th>S</th><th>T</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" style="padding:5px 10px">รวม ${BRANCH_LABEL[br]}</td>
+            <td class="num">${tCom ? tCom.toLocaleString() : ''}</td>
+            <td class="num">${tLvl ? tLvl.toLocaleString() : ''}</td>
+            <td class="num">${tOT ? tOT.toLocaleString() : ''}</td>
+            <td class="num">${tR  ? tR.toLocaleString()  : ''}</td>
+            <td class="num">${tS  ? tS.toLocaleString()  : ''}</td>
+            <td class="num">${grandTot.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+    </div>`;
+  }
+  wrap.innerHTML = html;
+  document.getElementById('branch-summary-panel').style.display = '';
+}
+
+function _otrsCell(row, typ, ri) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const total = row[typ] || 0;
+  const parts = BRANCHES.map(b => ({ b, v: row[typ+'_'+b]||0 })).filter(x => x.v > 0);
+  // If only one branch or no breakdown, show plain input
+  const hasBreakdown = parts.length > 1 || (parts.length === 1 && parts[0].b !== row.branch);
+  const inputEl = `<input class="cell-edit" type="number" min="0" step="50" value="${total||''}" onchange="dsCellChange(${ri},'${typ}',+this.value||0)">`;
+  if (!hasBreakdown || !total) return inputEl;
+  const tipLines = parts.map(x=>`${x.b}: ${x.v.toLocaleString()}`).join('&#10;');
+  return `<div class="otrs-wrap" title="${tipLines}" onclick="showOtrsPopup(this,'${typ}',${JSON.stringify(parts).replace(/"/g,'&quot;')})">${inputEl}<span class="otrs-badge">${parts.length}</span></div>`;
+}
+
+function showOtrsPopup(el, typ, parts) {
+  document.querySelectorAll('.otrs-popup').forEach(p=>p.remove());
+  const popup = document.createElement('div');
+  popup.className = 'otrs-popup';
+  popup.innerHTML = `<div class="otrs-popup-title">${typ} แยกสาขา</div>` +
+    parts.map(x=>`<div class="otrs-popup-row"><span>${x.b}</span><span>${x.v.toLocaleString()}</span></div>`).join('');
+  document.body.appendChild(popup);
+  const rect = el.getBoundingClientRect();
+  popup.style.left = (rect.left + window.scrollX) + 'px';
+  popup.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+  setTimeout(()=>{ document.addEventListener('click', ()=>popup.remove(), {once:true}); }, 10);
+}
+
+function renderDailyTable() {
+  const tbl = document.getElementById('daily-table');
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+  const CO_KEY = {'Sinsub':'sinsub','Sukjai':'sukjai','Happines':'happines','?':'unknown'};
+  const CO_LABEL = {'Sinsub':'SINSUB','Sukjai':'SUKJAI','Happines':'HAPPINES','?':'ไม่ทราบบริษัท'};
+
+  let html = `<thead><tr>
+    <th style="width:28px"></th>
+    <th class="th-left" style="min-width:100px">Nick</th>
+    <th class="th-left" style="min-width:130px">Full Name</th>
+    <th class="th-left">Company</th>
+    <th class="th-left">Level</th>
+    ${BRANCHES.map(b=>`<th>${b} Com</th>`).join('')}
+    <th>OT</th><th>R</th><th>S</th>
+    <th style="color:#f6ad55">Level ฿</th>
+    <th style="color:#f6ad55">Tip</th>
+    <th style="background:#0d2d1a">Total</th>
+  </tr></thead><tbody id="ds-tbody">`;
+
+  const byCompany = {};
+  for (const c of COMPANIES) byCompany[c] = dailySummaryRows.filter(r => r.company === c || (c==='?' && !['Sinsub','Sukjai','Happines'].includes(r.company)));
+
+  let grandLS=0,grandAS=0,grandSK=0,grandLP=0,grandOS=0,grandR=0,grandOT=0,grandS=0,grandLvl=0,grandTip=0,grandTot=0;
+
+  for (const co of COMPANIES) {
+    const rows = byCompany[co];
+    if (!rows.length) continue;
+    const coKey = CO_KEY[co];
+    html += `<tr><td colspan="14" class="co-hdr-${coKey}" style="color:white;font-size:12px;font-weight:700;padding:6px 10px;letter-spacing:0.5px">${CO_LABEL[co]}</td></tr>`;
+
+    let subLS=0,subAS=0,subSK=0,subLP=0,subOS=0,subR=0,subOT=0,subS=0,subLvl=0,subTip=0,subTot=0;
+    for (let i=0; i<rows.length; i++) {
+      const row = rows[i];
+      const ri = dailySummaryRows.indexOf(row);
+      const total = row.LS+row.AS+row.SK+row.LP+row.OS+row.R+row.OT+row.S+row.Level+row.Tip;
+      subLS+=row.LS; subAS+=row.AS; subSK+=row.SK; subLP+=row.LP; subOS+=row.OS;
+      subR+=row.R; subOT+=row.OT; subS+=row.S; subLvl+=row.Level; subTip+=row.Tip; subTot+=total;
+
+      const osTag = row.isOsLevel ? ' <span style="font-size:10px;background:#fed7d7;color:#c53030;border-radius:3px;padding:1px 4px">OS</span>' : '';
+      html += `<tr class="co-${coKey}" draggable="true" data-ri="${ri}" data-co="${co}">
+        <td><span class="drag-handle" title="ลากเพื่อเรียงลำดับ">⠿</span></td>
+        <td><strong>${row.nick}</strong>${osTag}</td>
+        <td><input class="cell-edit name-edit" value="${escHtml(row.fullName)}" onchange="dsCellChange(${ri},'fullName',this.value)"></td>
+        <td>${row.company}</td>
+        <td style="font-size:11px;color:#718096">${row.level}</td>
+        ${BRANCHES.map(b=>`<td class="num"><input class="cell-edit" type="number" min="0" step="50" value="${row[b]||''}" onchange="dsCellChange(${ri},'${b}',+this.value||0)"></td>`).join('')}
+        <td class="num ots-cell">${_otrsCell(row,'OT',ri)}</td>
+        <td class="num ots-cell">${_otrsCell(row,'R',ri)}</td>
+        <td class="num ots-cell">${_otrsCell(row,'S',ri)}</td>
+        <td class="num"><input class="cell-edit" type="number" min="0" step="100" value="${row.Level||''}" placeholder="0" onchange="dsCellChange(${ri},'Level',+this.value||0)" style="border-color:#f6ad55;background:#fffbeb"></td>
+        <td class="num"><input class="cell-edit" type="number" min="0" step="50" value="${row.Tip||''}" placeholder="0" onchange="dsCellChange(${ri},'Tip',+this.value||0)" style="border-color:#f6ad55;background:#fffbeb"></td>
+        <td class="num" id="ds-total-${ri}" style="font-weight:700">${numFmt(total)}</td>
+      </tr>`;
+    }
+    // subtotal row per company
+    const subTotal2 = subLS+subAS+subSK+subLP+subOS+subR+subOT+subS+subLvl+subTip;
+    html += `<tr class="subtotal-row">
+      <td></td><td colspan="4" style="padding:5px 10px;font-size:12px">รวม ${CO_LABEL[co]}</td>
+      <td class="num">${numFmt(subLS)}</td><td class="num">${numFmt(subAS)}</td>
+      <td class="num">${numFmt(subSK)}</td><td class="num">${numFmt(subLP)}</td>
+      <td class="num">${numFmt(subOS)}</td>
+      <td class="num">${numFmt(subOT)}</td><td class="num">${numFmt(subR)}</td>
+      <td class="num">${numFmt(subS)}</td>
+      <td class="num">${numFmt(subLvl)}</td><td class="num">${numFmt(subTip)}</td>
+      <td class="num" style="font-weight:700">${numFmt(subTotal2)}</td>
+    </tr>`;
+
+    if (co !== '?') {
+      grandLS+=subLS; grandAS+=subAS; grandSK+=subSK; grandLP+=subLP; grandOS+=subOS;
+      grandR+=subR; grandOT+=subOT; grandS+=subS; grandLvl+=subLvl; grandTip+=subTip; grandTot+=subTotal2;
+    }
+  }
+
+  // Grand total
+  const unknownRows = byCompany['?'] || [];
+  const unknownTotal = unknownRows.reduce((s,r) => s + r.LS+r.AS+r.SK+r.LP+r.OS+r.R+r.OT+r.S+r.Level+r.Tip, 0);
+  const grandLabel = unknownRows.length
+    ? `รวมทั้งหมด <span style="font-size:10px;color:#f6ad55">(ไม่รวม ${unknownRows.length} คนที่ยังไม่ทราบบริษัท รวม ฿${unknownTotal.toLocaleString()})</span>`
+    : 'รวมทั้งหมด';
+  html += `<tr class="total-row">
+    <td></td><td colspan="4" style="padding:6px 10px">${grandLabel}</td>
+    <td class="num">${numFmt(grandLS)}</td><td class="num">${numFmt(grandAS)}</td>
+    <td class="num">${numFmt(grandSK)}</td><td class="num">${numFmt(grandLP)}</td>
+    <td class="num">${numFmt(grandOS)}</td>
+    <td class="num">${numFmt(grandOT)}</td><td class="num">${numFmt(grandR)}</td>
+    <td class="num">${numFmt(grandS)}</td>
+    <td class="num">${numFmt(grandLvl)}</td><td class="num">${numFmt(grandTip)}</td>
+    <td class="num">${numFmt(grandTot)}</td>
+  </tr>`;
+
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+function dsCellChange(ri, field, val) {
+  dailySummaryRows[ri][field] = val;
+  // update total cell
+  const row = dailySummaryRows[ri];
+  const total = row.LS+row.AS+row.SK+row.LP+row.OS+row.R+row.OT+row.S+row.Level+row.Tip;
+  const totCell = document.getElementById(`ds-total-${ri}`);
+  if (totCell) totCell.textContent = numFmt(total);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function resetDailyEdit() {
+  if (!confirm('รีเซ็ตการแก้ไขทั้งหมด และคำนวณใหม่ใช่ไหม?')) return;
+  buildDailySummary();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAG-AND-DROP ROW REORDER (Daily Summary)
+// ═══════════════════════════════════════════════════════
+let _dragSrcRi = null;
+
+function dsInitDrag() {
+  const oldTbody = document.getElementById('ds-tbody');
+  if (!oldTbody) return;
+
+  // Clone to wipe all existing event listeners, then re-attach fresh ones
+  const tbody = oldTbody.cloneNode(true);
+  oldTbody.parentNode.replaceChild(tbody, oldTbody);
+
+  tbody.addEventListener('dragstart', e => {
+    const tr = e.target.closest('tr[data-ri]');
+    if (!tr) return;
+    _dragSrcRi = parseInt(tr.dataset.ri);
+    tr.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(_dragSrcRi));
+  });
+
+  tbody.addEventListener('dragend', () => {
+    tbody.querySelectorAll('tr').forEach(r => {
+      r.classList.remove('dragging','drag-over-top','drag-over-bottom');
+    });
+    _dragSrcRi = null;
+  });
+
+  tbody.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const tr = e.target.closest('tr[data-ri]');
+    tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over-top','drag-over-bottom'));
+    if (!tr || _dragSrcRi === null) return;
+    const rect = tr.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) tr.classList.add('drag-over-top');
+    else                                          tr.classList.add('drag-over-bottom');
+  });
+
+  tbody.addEventListener('dragleave', e => {
+    const tr = e.target.closest('tr[data-ri]');
+    if (tr) tr.classList.remove('drag-over-top','drag-over-bottom');
+  });
+
+  tbody.addEventListener('drop', e => {
+    e.preventDefault();
+    const tr = e.target.closest('tr[data-ri]');
+    if (!tr || _dragSrcRi === null) return;
+    const destRi = parseInt(tr.dataset.ri);
+    if (_dragSrcRi === destRi) { _dragSrcRi = null; return; }
+
+    const insertAfter = e.clientY >= tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+
+    // Save reference to dest row object before splice changes indices
+    const destRowObj = dailySummaryRows[destRi];
+    const srcRow     = dailySummaryRows.splice(_dragSrcRi, 1)[0];
+
+    // Find where destRowObj ended up after removing srcRow
+    let newDest = dailySummaryRows.indexOf(destRowObj);
+    if (insertAfter) newDest += 1;
+    dailySummaryRows.splice(newDest, 0, srcRow);
+
+    _dragSrcRi = null;
+    renderDailyTable();
+    dsInitDrag();
+  });
+}
+
+// ─── Confirm Daily → Master ─────────────────────────────
+function confirmToMaster() {
+  if (!dailySummaryRows.length) return;
+  const dates = allRawRecords.map(r=>r.saleDate).filter(d=>d&&!isNaN(d));
+  dates.sort((a,b)=>a-b);
+  // Use dates from records for dateStr (all unique dates)
+  const uniqueDates = [...new Set(dates.map(d=>dateToISO(d)))];
+  const dateStr = uniqueDates.length === 1 ? uniqueDates[0] : uniqueDates.join(',');
+
+  // Build master records
+  const BLIST = ['LS','AS','SK','LP','OS'];
+  const newRecs = dailySummaryRows.map(row => {
+    const rec = {
+      id: genId(),
+      date: dateStr,
+      nick: row.nick,
+      fullName: row.fullName,
+      company: row.company,
+      level: row.level,
+      LS: row.LS, AS: row.AS, SK: row.SK, LP: row.LP, OS: row.OS,
+      R: row.R, OT: row.OT, S: row.S,
+      Level: row.Level, Tip: row.Tip,
+      isOsLevel: row.isOsLevel,
+      note: '',
+      source: payrollFiles.map(f=>f.name).join(', '),
+    };
+    for (const b of BLIST) { rec['OT_'+b]=row['OT_'+b]||0; rec['R_'+b]=row['R_'+b]||0; rec['S_'+b]=row['S_'+b]||0; }
+    return rec;
+  });
+
+  // Merge: replace ALL existing records for these dates (full-day replace)
+  // Collect every individual ISO date covered by the new records
+  const removeDates = new Set(
+    newRecs.flatMap(r => (r.date||'').split(',').map(s => s.trim()))
+  );
+  masterRecords = masterRecords.filter(r =>
+    !(r.date||'').split(',').map(s=>s.trim()).some(d => removeDates.has(d))
+  );
+  masterRecords.push(...newRecs);
+  msSaveLocal();
+  msDirty = true;
+
+  // Collect unique date strings from the confirmed records
+  const newDatesList = [...new Set(newRecs.map(r => r.date).flatMap(d => d.split(',')))];
+
+  showStatus('success', `✅ บันทึกลง Master Summary แล้ว — ${newRecs.length} records`);
+  document.getElementById('daily-summary-panel').style.display = 'none';
+  document.getElementById('branch-summary-panel').style.display = 'none';
+
+  // Auto-switch to Master tab and highlight newly confirmed dates in calendar
+  switchTab('master');
+  msRefreshUI(new Set(newDatesList));
+
+  // Auto-push to GitHub silently if configured
+  ghSilentPushIfConfigured();
+}
+
+// ─── Missing COM_MAP panel ──────────────────────────────
+function showMissingPanel(missing) {
+  const panel = document.getElementById('missing-panel');
+  const list  = document.getElementById('missing-items-list');
+  list.innerHTML = '';
+  for (const [item, branches] of Object.entries(missing)) {
+    const div = document.createElement('div');
+    div.className = 'missing-item';
+    const key = btoa(encodeURIComponent(item)).replace(/=/g,'');
+    div.innerHTML = `<span class="item-name" title="${escHtml(item)}">${escHtml(item)}</span>
+      <span style="font-size:11px;background:#fed7d7;color:#c53030;padding:2px 8px;border-radius:10px">${[...branches].join(',')}</span>
+      <input type="number" id="rate-${key}" placeholder="฿ เรท" min="0" step="50">`;
+    list.appendChild(div);
+  }
+  panel.style.display = '';
+  panel.scrollIntoView({behavior:'smooth'});
+}
+function confirmMissingRates() {
+  let allFilled = true;
+  for (const item of Object.keys(pendingMissingRates)) {
+    const key = btoa(encodeURIComponent(item)).replace(/=/g,'');
+    const inp = document.getElementById('rate-'+key);
+    const val = parseFloat(inp?.value);
+    if (isNaN(val) || val < 0) { allFilled = false; if(inp) inp.style.borderColor='#e53e3e'; continue; }
+    comMapExtra[item] = val;
+    if(inp) inp.style.borderColor='#68d391';
+  }
+  if (!allFilled) { alert('กรุณากรอกเรทให้ครบทุก item'); return; }
+  document.getElementById('missing-panel').style.display = 'none';
+  const _bg = document.getElementById('btn-gen');
+  if (_bg) _bg.disabled = true;
+  buildDailySummary();
+  if (_bg) _bg.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MASTER SUMMARY
+// ═══════════════════════════════════════════════════════
+function msInit() {
+  ghLoadSettings();
+  if (!masterRecords.length) msLoadLocal();
+  msRefreshUI();
+  // Auto-collapse GitHub settings if already configured
+  const { token, repo } = ghGetConfig();
+  if (token && repo) {
+    setTimeout(() => ghToggleCollapse(), 100);
+  }
+}
+
+function msLoadLocal() {
+  try {
+    const raw = localStorage.getItem('diora_master_v2');
+    if (raw) { masterRecords = JSON.parse(raw); return true; }
+  } catch(e) {}
+  return false;
+}
+function msSaveLocal(skipRefresh) {
+  try {
+    localStorage.setItem('diora_master_v2', JSON.stringify(masterRecords));
+  } catch(e) {
+    showStatus('error', '❌ พื้นที่ localStorage เต็ม — กรุณา Export ข้อมูลก่อนเพิ่มข้อมูลใหม่');
+  }
+  msDirty = true;
+  if (!skipRefresh) msRefreshUI();
+}
+
+function msRefreshUI(newDates) {
+  const has = masterRecords.length > 0;
+  document.getElementById('ms-empty').style.display = has ? 'none' : '';
+  document.getElementById('ms-cal-card').style.display = has ? '' : 'none';
+  const bar = document.getElementById('ms-period-bar');
+  bar.style.display = has ? '' : 'none';
+  if (!has) return;
+
+  // Stats
+  const allDates = new Set();
+  const allNicks = new Set();
+  let totalCom = 0, totalExtra = 0;
+  for (const r of masterRecords) {
+    (r.date||'').split(',').forEach(d => { if (d.trim()) allDates.add(d.trim()); });
+    allNicks.add(r.nick);
+    totalCom   += (r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0);
+    totalExtra += (r.R||0)+(r.OT||0)+(r.S||0);
+  }
+  const allDatesSorted = [...allDates].filter(d=>d).sort();
+
+  // Use actual min/max of stored dates for calendar range
+  // (don't lock to fixed 1-month period — data may span multiple months)
+  let startDate, endDate;
+  if (allDatesSorted.length) {
+    const dateObjs = allDatesSorted.map(d => new Date(d));
+    const minD = dateObjs[0];
+    const maxD = dateObjs[dateObjs.length - 1];
+    // Expand range: start = 21st of month before minD (or same month if minD >= 21)
+    // end = 20th of month after maxD (or same month if maxD <= 20)
+    const { startDate: s } = detectPeriod([minD]);
+    // endDate = 20th of the month that contains maxD's period
+    let eMonth = maxD.getMonth() + (maxD.getDate() > 20 ? 1 : 0);
+    let eYear  = maxD.getFullYear();
+    if (eMonth > 11) { eMonth = 0; eYear++; }
+    endDate   = new Date(eYear, eMonth, 20);
+    startDate = s;
+    // If endDate < maxD (edge case), push forward one more month
+    if (endDate < maxD) {
+      eMonth++; if (eMonth > 11) { eMonth = 0; eYear++; }
+      endDate = new Date(eYear, eMonth, 20);
+    }
+  } else {
+    const p = detectPeriod([]);
+    startDate = p.startDate; endDate = p.endDate;
+  }
+
+  const periodStr = `${fmtDate(startDate)} – ${fmtDate(endDate)}`;
+  document.getElementById('ms-pb-period').textContent = periodStr;
+  document.getElementById('ms-pb-days').textContent   = allDates.size + ' วัน';
+  document.getElementById('ms-pb-com').textContent    = '฿' + totalCom.toLocaleString();
+  document.getElementById('ms-pb-extra').textContent  = '฿' + totalExtra.toLocaleString();
+  document.getElementById('ms-pb-emp').textContent    = allNicks.size + ' คน';
+
+  msRenderCalendar(startDate, endDate, allDates, newDates);
+  msRenderTable();
+}
+
+// ═══════════════════════════════════════════════════════
+//  CALENDAR — Date Status UI
+// ═══════════════════════════════════════════════════════
+function msRenderCalendar(startDate, endDate, existingDates, newDates) {
+  const grid = document.getElementById('ms-cal-grid');
+  if (!grid) return;
+
+  const today = dateToISO(new Date());
+  const newSet = new Set(newDates || []);
+
+  // Collect all dates in the period range day by day
+  let html = '';
+  let cur = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const MON_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  let lastMonth = -1;
+
+  while (cur <= end) {
+    const iso = dateToISO(cur);
+    const m = cur.getMonth();
+    // Month label
+    if (m !== lastMonth) {
+      html += `<div class="cal-month-label">${MON_TH[m]} ${cur.getFullYear()}</div>`;
+      lastMonth = m;
+    }
+    const isToday    = iso === today;
+    const hasData    = existingDates.has(iso);
+    const isNew      = newSet.has(iso);
+    let cls = 'cal-day ';
+    if (isNew)       cls += 'new-data';
+    else if (hasData) cls += 'has-data';
+    else             cls += 'empty';
+    if (isToday)     cls += ' today';
+
+    const label = cur.getDate();
+    const tip   = hasData ? `${iso} — มีข้อมูลแล้ว${isNew?' (อัปเดตล่าสุด)':''}` : `${iso} — ยังไม่มีข้อมูล`;
+    const clickAttr = hasData ? `onclick="msShowDayPanel('${iso}',this)"` : '';
+    const extraCls  = hasData ? ' clickable' : '';
+    html += `<div class="${cls}${extraCls}" title="${tip}" data-iso="${iso}" ${clickAttr}>${label}</div>`;
+    cur.setDate(cur.getDate() + 1);
+  }
+  grid.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DAY DETAIL PANEL
+// ═══════════════════════════════════════════════════════
+//  DAY DETAIL PANEL — คลิกวันในปฏิทินเพื่อดู/แก้ไข
+// ═══════════════════════════════════════════════════════
+let _ddpIso     = null;   // ISO วันที่ที่เลือก
+let _ddpEditing = false;  // โหมดแก้ไข
+let _ddpEdits   = {};     // {masterIdx: {field: val}} รอ save
+let _ddpOrder   = [];     // [masterIdx, ...] ลำดับแถวในวันนี้ (สำหรับ drag)
+let _ddpDragSrc = null;   // index ใน _ddpOrder ที่กำลัง drag
+let _ddpSearch  = '';     // ข้อความค้นหา
+
+// ── helper: ISO → label ไทย ─────────────────────────
+function _isoToThai(iso) {
+  const MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const [yr, mo, dy] = iso.split('-').map(Number);
+  return `${dy} ${MON[mo - 1]} ${yr}`;
+}
+
+// ── helper: หา indices ใน masterRecords สำหรับวันนี้ ─
+function _ddpGetIndices(iso) {
+  return masterRecords
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => (r.date || '').split(',').map(s => s.trim()).includes(iso))
+    .map(({ i }) => i);
+}
+
+// ── เปิด panel เมื่อคลิกวันในปฏิทิน ───────────────
+function msShowDayPanel(iso, el) {
+  document.querySelectorAll('.cal-day.selected').forEach(d => d.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+
+  // Hide upload-workflow preview panels so they don't overlap with Day Detail Panel
+  ['branch-summary-panel','daily-summary-panel','multidate-panel'].forEach(id => {
+    const el2 = document.getElementById(id);
+    if (el2) el2.style.display = 'none';
+  });
+
+  _ddpIso     = iso;
+  _ddpEditing = false;
+  _ddpEdits   = {};
+  _ddpOrder   = _ddpGetIndices(iso);
+  _ddpSearch  = '';
+
+  const panel = document.getElementById('day-detail-panel');
+  panel.style.display = 'block';
+  document.getElementById('ddp-title').textContent = `📋 ${_isoToThai(iso)}`;
+
+  _ddpRefreshButtons();
+  _ddpRender();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── อัปเดตปุ่ม header ────────────────────────────────
+function _ddpRefreshButtons() {
+  const has = _ddpOrder.length > 0;
+  // ddp-btn-total removed (moved to period bar)
+  _ddpShow('ddp-btn-edit',   has && !_ddpEditing);
+  _ddpShow('ddp-btn-save',   _ddpEditing);
+  _ddpShow('ddp-btn-cancel', _ddpEditing);
+  _ddpShow('ddp-btn-delday', has && !_ddpEditing);
+  _ddpShow('ddp-hint',       _ddpEditing);
+}
+function _ddpShow(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+// ── render ตาราง ─────────────────────────────────────
+function _ddpRender() {
+  const body = document.getElementById('ddp-body');
+  if (!_ddpOrder.length) {
+    body.innerHTML = `<div class="ddp-empty">ไม่มีข้อมูลสำหรับวันนี้</div>`;
+    return;
+  }
+
+  const FIELDS  = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+  const CO_KEY  = { Sinsub:'sinsub', Sukjai:'sukjai', Happines:'happines' };
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+
+  // filter ตาม search
+  const sq = _ddpSearch.toLowerCase().trim();
+
+  // จัดกลุ่มตามบริษัท แต่เก็บลำดับใน _ddpOrder
+  const byCompany = {};
+  COMPANIES.forEach(c => byCompany[c] = []);
+  _ddpOrder.forEach((mi, pos) => {
+    const r  = masterRecords[mi];
+    if (sq && !(r.nick||'').toLowerCase().includes(sq) && !(r.fullName||'').toLowerCase().includes(sq)) return;
+    const co = COMPANIES.slice(0,3).includes(r.company) ? r.company : '?';
+    byCompany[co].push({ mi, pos });
+  });
+
+  const totalFiltered = COMPANIES.reduce((s,c)=>s+byCompany[c].length, 0);
+
+  // Branch detail tables (แสดงเฉพาะ view mode ไม่แสดงตอน edit หรือ search)
+  const branchTablesHtml = (!_ddpEditing) ? _ddpRenderBranchTables(_ddpIso) : '';
+
+  let html = `${branchTablesHtml}
+  <div style="font-size:13px;font-weight:700;color:#2d3748;margin-bottom:8px">📋 ตารางรวม</div>
+  <div class="ddp-search-wrap">
+    <input class="ddp-search" id="ddp-search-input" type="text" placeholder="🔍 ค้นหาชื่อ..." value="${escHtml(_ddpSearch)}"
+      oninput="_ddpSearch=this.value;_ddpRenderTable()" autocomplete="off">
+    <span class="ddp-search-count" id="ddp-search-count">${sq ? `พบ ${totalFiltered} คน` : `ทั้งหมด ${_ddpOrder.length} คน`}</span>
+    ${sq ? `<button id="ddp-search-clear" onclick="_ddpSearch='';document.getElementById('ddp-search-input').value='';_ddpRenderTable()" style="font-size:11px;padding:3px 8px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;color:#718096">✕ ล้าง</button>` : '<span id="ddp-search-clear"></span>'}
+  </div>
+  <div style="overflow-x:auto"><table class="ddp-table" id="ddp-tbl">
+    <thead><tr>
+      ${_ddpEditing ? '<th style="width:20px"></th>' : ''}
+      <th class="th-left" style="min-width:80px">Nick</th>
+      <th class="th-left" style="min-width:90px">ชื่อจริง</th>
+      <th class="th-left">Co.</th>
+      <th>LS</th><th>AS</th><th>SK</th><th>LP</th><th>OS</th>
+      <th>OT</th><th>R</th><th>S</th>
+      <th style="color:#f6ad55;min-width:52px">Level฿</th>
+      <th style="color:#f6ad55;min-width:44px">Tip</th>
+      <th style="background:#0d2d1a;color:white;min-width:52px">Total</th>
+      <th class="th-left" style="min-width:80px">Note</th>
+      <th style="width:28px"></th>
+    </tr></thead><tbody id="ddp-tbody">`;
+
+  // grand total accumulators
+  let gLS=0,gAS=0,gSK=0,gLP=0,gOS=0,gOT=0,gR=0,gS=0,gLv=0,gTip=0;
+
+  for (const co of COMPANIES) {
+    const entries = byCompany[co];
+    if (!entries.length) continue;
+    const coKey   = CO_KEY[co] || 'unknown';
+    const coLabel = { Sinsub:'SINSUB', Sukjai:'SUKJAI', Happines:'HAPPINES', '?':'ไม่ทราบ' }[co];
+    const colSpan = _ddpEditing ? 18 : 17;
+    html += `<tr><td colspan="${colSpan}" class="co-hdr-${coKey}" style="color:white;font-size:11px;font-weight:700;padding:4px 8px">${coLabel}</td></tr>`;
+
+    let sLS=0,sAS=0,sSK=0,sLP=0,sOS=0,sOT=0,sR=0,sS=0,sLv=0,sTip=0;
+
+    for (const { mi, pos } of entries) {
+      const r   = masterRecords[mi];
+      const ed  = _ddpEdits[mi] || {};
+      const v   = f => (f in ed ? ed[f] : (r[f] || 0));
+      const tot = FIELDS.reduce((s,f) => s + v(f), 0);
+      const osTag = r.isOsLevel
+        ? '<span style="font-size:9px;background:#fed7d7;color:#c53030;border-radius:3px;padding:1px 3px;margin-left:2px">OS</span>' : '';
+
+      sLS+=v('LS'); sAS+=v('AS'); sSK+=v('SK'); sLP+=v('LP'); sOS+=v('OS');
+      sOT+=v('OT'); sR+=v('R'); sS+=v('S'); sLv+=v('Level'); sTip+=v('Tip');
+
+      if (_ddpEditing) {
+        html += `<tr class="ddp-edit" data-pos="${pos}" data-mi="${mi}" draggable="true">
+          <td style="cursor:grab;text-align:center;color:#a0aec0;font-size:16px;user-select:none">⠿</td>
+          <td><strong>${escHtml(r.nick)}</strong>${osTag}</td>
+          <td style="font-size:11px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+          <td style="font-size:10px;color:#718096">${r.company||'?'}</td>
+          ${FIELDS.map(f => `<td class="num"><input class="cell-sm" type="number" min="0" step="50"
+            value="${v(f)||''}" data-mi="${mi}" data-field="${f}" oninput="ddpInput(this)"></td>`).join('')}
+          <td class="num" id="ddp-tot-${mi}" style="font-weight:700;background:#0d2d1a;color:white">${numFmt(tot)}</td>
+          <td><input class="cell-sm" style="width:80px;text-align:left"
+            type="text" value="${escHtml(r.note||'')}" data-mi="${mi}" data-field="note" oninput="ddpInput(this)"></td>
+          <td><button onclick="ddpDeleteRow(${mi})"
+            style="background:none;border:none;color:#fc8181;cursor:pointer;font-size:14px" title="ลบ">🗑</button></td>
+        </tr>`;
+      } else {
+        const fmt = f => v(f) ? `<span style="color:#2d3748">${numFmt(v(f))}</span>` : `<span style="color:#e2e8f0">—</span>`;
+        html += `<tr class="co-${coKey}">
+          <td style="text-align:left;padding:5px 8px"><strong>${escHtml(r.nick)}</strong>${osTag}</td>
+          <td style="font-size:11px;color:#4a5568;text-align:left;padding:5px 8px">${escHtml(r.fullName||r.nick)}</td>
+          <td style="font-size:10px;color:#718096">${r.company||'?'}</td>
+          ${FIELDS.map(f => `<td class="num">${fmt(f)}</td>`).join('')}
+          <td class="num" style="font-weight:700;background:#0d2d1a;color:white">${numFmt(tot)}</td>
+          <td style="font-size:11px;color:#718096;text-align:left;padding:5px 8px">${escHtml(r.note||'')}</td>
+          <td></td>
+        </tr>`;
+      }
+    }
+
+    // subtotal per company
+    const sTot = sLS+sAS+sSK+sLP+sOS+sOT+sR+sS+sLv+sTip;
+    const span1 = _ddpEditing ? 4 : 3;
+    html += `<tr style="background:#f0faf4;font-size:11px;font-weight:700">
+      <td colspan="${span1}" style="padding:4px 8px;text-align:left">รวม ${entries.length} คน</td>
+      <td class="num">${numFmt(sLS)}</td><td class="num">${numFmt(sAS)}</td>
+      <td class="num">${numFmt(sSK)}</td><td class="num">${numFmt(sLP)}</td>
+      <td class="num">${numFmt(sOS)}</td><td class="num">${numFmt(sOT)}</td>
+      <td class="num">${numFmt(sR)}</td><td class="num">${numFmt(sS)}</td>
+      <td class="num">${numFmt(sLv)}</td><td class="num">${numFmt(sTip)}</td>
+      <td class="num" style="background:#0d2d1a;color:white">${numFmt(sTot)}</td>
+      <td colspan="2"></td>
+    </tr>`;
+
+    gLS+=sLS; gAS+=sAS; gSK+=sSK; gLP+=sLP; gOS+=sOS;
+    gOT+=sOT; gR+=sR; gS+=sS; gLv+=sLv; gTip+=sTip;
+  }
+
+  // grand total
+  const gTot = gLS+gAS+gSK+gLP+gOS+gOT+gR+gS+gLv+gTip;
+  const span2 = _ddpEditing ? 4 : 3;
+  html += `<tr class="total-row">
+    <td colspan="${span2}" style="padding:5px 8px;text-align:left">ยอดรวมทั้งหมด</td>
+    <td class="num">${numFmt(gLS)}</td><td class="num">${numFmt(gAS)}</td>
+    <td class="num">${numFmt(gSK)}</td><td class="num">${numFmt(gLP)}</td>
+    <td class="num">${numFmt(gOS)}</td><td class="num">${numFmt(gOT)}</td>
+    <td class="num">${numFmt(gR)}</td><td class="num">${numFmt(gS)}</td>
+    <td class="num">${numFmt(gLv)}</td><td class="num">${numFmt(gTip)}</td>
+    <td class="num" style="font-size:13px;background:#0d2d1a;color:white">฿${gTot.toLocaleString()}</td>
+    <td colspan="2"></td>
+  </tr>`;
+
+  html += '</tbody></table></div></div>';
+
+  // Surgical update only when user is actively typing in the search box
+  // (preserves input focus). For all other cases (date switch, clear, edit mode)
+  // do a full replace so branch tables always render correctly.
+  const existingSearch = document.getElementById('ddp-search-input');
+  if (existingSearch && sq) {
+    // 1. Update count label
+    const countEl = document.getElementById('ddp-search-count');
+    if (countEl) countEl.textContent = `พบ ${totalFiltered} คน`;
+    // 2. Update clear button
+    const clearEl = document.getElementById('ddp-search-clear');
+    if (clearEl) {
+      clearEl.outerHTML = `<button id="ddp-search-clear" onclick="_ddpSearch='';document.getElementById('ddp-search-input').value='';_ddpRenderTable()" style="font-size:11px;padding:3px 8px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;color:#718096">✕ ล้าง</button>`;
+    }
+    // 3. Replace only tbody — never touch the input so focus is preserved
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const newTbody = tmp.querySelector('#ddp-tbody');
+    const oldTbody = document.getElementById('ddp-tbody');
+    if (newTbody && oldTbody) oldTbody.replaceWith(newTbody.cloneNode(true));
+  } else {
+    // Full replace — covers: first open, date switch, search cleared, edit mode toggle
+    body.innerHTML = html;
+    const newInput = document.getElementById('ddp-search-input');
+    if (newInput) newInput.focus();
+  }
+
+  // เปิด drag ถ้าอยู่ใน edit mode
+  if (_ddpEditing) _ddpInitDrag();
+}
+
+// Alias — called from search input to avoid full re-render
+function _ddpRenderTable() { _ddpRender(); }
+
+// ── Branch Detail Tables (แสดงก่อนตารางรวม) ─────────────
+function _ddpRenderBranchTables(iso) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const BR_LABEL = {LS:'Langsuan : LS', AS:'Asoke : AS', SK:'Sukhumvit : SK', LP:'Lumpini : LP', OS:'Onsen : OS'};
+  // Ensure edit state maps exist
+  for (const b of BRANCHES) { if (!_bdtEdits[b])   _bdtEdits[b]   = {}; }
+  for (const b of BRANCHES) { if (!(_bdtEditing[b])) _bdtEditing[b] = false; }
+
+  // ดึง masterRecords ของวันนี้
+  const allDayRecs = masterRecords.filter(r =>
+    (r.date||'').split(',').map(s=>s.trim()).includes(iso)
+  );
+  if (!allDayRecs.length) return '';
+  // Only known employees (company !== '?') are included in branch tables and totals
+  const dayRecs = allDayRecs.filter(r => (r.company||'?') !== '?');
+  const unknownRecs = allDayRecs.filter(r => (r.company||'?') === '?');
+
+  const fmt0 = v => v ? v.toLocaleString() : '<span style="color:#e2e8f0">—</span>';
+  const fmt  = v => v ? v.toLocaleString() : '';
+
+  let html = `<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
+    <span style="font-size:13px;font-weight:700;color:#2d3748">📊 สรุปแยกสาขา</span>
+    <button class="bdt-toggle-btn" onclick="_bdtToggleAll(this)">▼ ซ่อนทั้งหมด</button>
+  </div>`;
+
+  // ──────────────────────────────────────────────────────
+  // Determine each person's "primary branch" = the branch
+  // where r[br] is largest. Used as fallback for legacy
+  // records that have no per-branch OT/R/S breakdown.
+  // ──────────────────────────────────────────────────────
+  function primaryBranch(r) {
+    let best = null, bestVal = 0;
+    for (const b of BRANCHES) {
+      if ((r[b]||0) > bestVal) { bestVal = r[b]||0; best = b; }
+    }
+    return best; // null if all zero (OT-only record)
+  }
+
+  // Check whether this record has ANY per-branch OT/R/S stored
+  function hasPerBranchOTRS(r) {
+    return BRANCHES.some(b =>
+      (r['OT_'+b]||0) > 0 || (r['R_'+b]||0) > 0 || (r['S_'+b]||0) > 0
+    );
+  }
+
+  let grandCom=0, grandOT=0, grandR=0, grandS=0, grandLvl=0, grandTip=0;
+
+  for (const br of BRANCHES) {
+    // Include a record in this branch section if:
+    //   a) it has commission in this branch (r[br] > 0), OR
+    //   b) it has per-branch OT/R/S for this branch, OR
+    //   c) legacy record: no per-branch OT/R/S stored at all,
+    //      but this IS the person's primary branch → show r.OT/R/S here
+    const brRecs = dayRecs.filter(r => {
+      if ((r[br]||0) > 0) return true;
+      if ((r['OT_'+br]||0) > 0 || (r['R_'+br]||0) > 0 || (r['S_'+br]||0) > 0) return true;
+      // legacy fallback: assign OT/R/S to primary branch
+      if (!hasPerBranchOTRS(r) && primaryBranch(r) === br &&
+          ((r.OT||0) > 0 || (r.R||0) > 0 || (r.S||0) > 0)) return true;
+      return false;
+    });
+    if (!brRecs.length) continue;
+
+    let sCom=0, sOT=0, sR=0, sS=0, sLvl=0, sTip=0;
+    let rowsHtml = '';
+
+    brRecs.forEach((r, idx) => {
+      const com = r[br] || 0;
+      // Per-branch OT/R/S if available, else fallback to total (legacy)
+      const legacy = !hasPerBranchOTRS(r) && primaryBranch(r) === br;
+      const ot  = legacy ? (r.OT||0)  : (r['OT_'+br]||0);
+      const req = legacy ? (r.R||0)   : (r['R_'+br]||0);
+      const sup = legacy ? (r.S||0)   : (r['S_'+br]||0);
+      const lvl = r.Level || 0;
+      const tip = r.Tip   || 0;
+      const tot = com + ot + req + sup + lvl + tip;
+      sCom+=com; sOT+=ot; sR+=req; sS+=sup; sLvl+=lvl; sTip+=tip;
+      rowsHtml += `<tr>
+        <td style="text-align:center;color:#a0aec0">${idx+1}</td>
+        <td style="font-size:10px;color:#718096">${escHtml(r.company||'?')}</td>
+        <td style="font-size:10px;color:#718096">${escHtml(r.level||'')}</td>
+        <td class="th-left"><strong>${escHtml(r.nick)}</strong></td>
+        <td style="font-size:10px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+        <td class="num">${fmt0(com)}</td>
+        <td class="num" style="color:#b7791f">${fmt0(lvl)}</td>
+        <td class="num" style="color:#276749">${fmt0(ot)}</td>
+        <td class="num" style="color:#2b4c8c">${fmt0(req)}</td>
+        <td class="num" style="color:#744210">${fmt0(sup)}</td>
+        <td class="num" style="color:#97266d">${fmt0(tip)}</td>
+        <td class="num" style="font-weight:700">${tot.toLocaleString()}</td>
+      </tr>`;
+    });
+
+    const sTot = sCom + sOT + sR + sS + sLvl + sTip;
+    grandCom+=sCom; grandOT+=sOT; grandR+=sR; grandS+=sS; grandLvl+=sLvl; grandTip+=sTip;
+
+    const isEditing = _bdtEditing[br] || false;
+    const editBtnLabel  = isEditing ? '💾 บันทึก' : '✏️ แก้ไข';
+    const editBtnStyle  = isEditing
+      ? 'background:#276749;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;margin-left:6px'
+      : 'background:rgba(255,255,255,0.25);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:6px';
+    const cancelBtnHtml = isEditing
+      ? `<button style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:4px"
+           onclick="_bdtCancelEdit('${br}')">✕</button>`
+      : '';
+
+    // Build rows with edit inputs if in edit mode
+    let rowsHtmlFinal = '';
+    brRecs.forEach((r, idx) => {
+      const mi  = masterRecords.indexOf(r);
+      const ed  = (_bdtEdits[br]||{})[mi] || {};
+      const vf  = (field, fallback) => (field in ed) ? ed[field] : fallback;
+
+      const com = vf('_br_com',  r[br]       || 0);
+      const legacy2 = !hasPerBranchOTRS(r) && primaryBranch(r) === br;
+      const ot  = vf('_br_ot',  legacy2 ? (r.OT||0) : (r['OT_'+br]||0));
+      const req = vf('_br_r',   legacy2 ? (r.R||0)  : (r['R_'+br]||0));
+      const sup = vf('_br_s',   legacy2 ? (r.S||0)  : (r['S_'+br]||0));
+      const lvl = vf('Level',   r.Level || 0);
+      const tip = vf('Tip',     r.Tip   || 0);
+      const tot = com + ot + req + sup + lvl + tip;
+
+      if (isEditing) {
+        const inp = (field, val) =>
+          `<input type="number" min="0" step="50" value="${val||''}"
+            style="width:60px;padding:2px 4px;font-size:11px;border:1px solid #68d391;border-radius:4px;text-align:right"
+            oninput="_bdtInput(this,'${br}',${mi},'${field}')" onblur="_bdtInput(this,'${br}',${mi},'${field}')">`;
+        const otherBranches = BRANCHES.filter(b => b !== br);
+        const moveOpts = otherBranches.map(b =>
+          `<option value="${b}">${b}</option>`).join('');
+        rowsHtmlFinal += `<tr style="background:#f0fff4">
+          <td style="text-align:center;color:#a0aec0">${idx+1}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.company||'?')}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.level||'')}</td>
+          <td class="th-left"><strong>${escHtml(r.nick)}</strong></td>
+          <td style="font-size:10px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+          <td style="padding:2px 4px">
+            <select style="font-size:11px;border:1px solid #fc8181;border-radius:4px;padding:2px 4px;color:#c53030;background:#fff5f5"
+              onchange="_bdtMoveRow(${mi},'${br}',this.value)">
+              <option value="">— ย้ายไป —</option>
+              ${moveOpts}
+            </select>
+          </td>
+          <td class="num">${inp('_br_com', com)}</td>
+          <td class="num">${inp('Level',   lvl)}</td>
+          <td class="num">${inp('_br_ot',  ot)}</td>
+          <td class="num">${inp('_br_r',   req)}</td>
+          <td class="num">${inp('_br_s',   sup)}</td>
+          <td class="num">${inp('Tip',     tip)}</td>
+          <td class="num" style="font-weight:700" id="bdt-tot-${br}-${mi}">${tot.toLocaleString()}</td>
+        </tr>`;
+      } else {
+        rowsHtmlFinal += `<tr>
+          <td style="text-align:center;color:#a0aec0">${idx+1}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.company||'?')}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.level||'')}</td>
+          <td class="th-left"><strong>${escHtml(r.nick)}</strong></td>
+          <td style="font-size:10px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+          <td class="num">${fmt0(com)}</td>
+          <td class="num" style="color:#b7791f">${fmt0(lvl)}</td>
+          <td class="num" style="color:#276749">${fmt0(ot)}</td>
+          <td class="num" style="color:#2b4c8c">${fmt0(req)}</td>
+          <td class="num" style="color:#744210">${fmt0(sup)}</td>
+          <td class="num" style="color:#97266d">${fmt0(tip)}</td>
+          <td class="num" style="font-weight:700">${tot.toLocaleString()}</td>
+        </tr>`;
+      }
+    });
+
+    html += `<div class="bdt-section" id="bdt-section-${br}">
+      <div style="display:flex;align-items:center">
+        <div class="bdt-title bdt-title-${br}">${BR_LABEL[br]}</div>
+        <button class="bdt-toggle-btn" onclick="_bdtToggle(this)" style="color:#fff;background:rgba(255,255,255,0.2);margin-left:6px">▼</button>
+        <button style="${editBtnStyle}" onclick="_bdtToggleEdit('${br}')">${editBtnLabel}</button>
+        ${cancelBtnHtml}
+      </div>
+      <div class="bdt-wrap open" style="overflow-x:auto">
+      <table class="bdt-tbl">
+        <thead><tr>
+          <th style="width:28px">No</th>
+          <th class="th-left" style="min-width:70px">Company</th>
+          <th class="th-left" style="min-width:55px">Level</th>
+          <th class="th-left" style="min-width:55px">Nick</th>
+          <th class="th-left" style="min-width:130px">Name</th>
+          ${isEditing ? '<th style="min-width:90px;color:#e53e3e">ย้ายสาขา</th>' : ''}
+          <th style="color:#276749">Com</th>
+          <th style="color:#b7791f">Level฿</th>
+          <th style="color:#276749">OT</th>
+          <th style="color:#2b4c8c">R</th>
+          <th style="color:#744210">S</th>
+          <th style="color:#97266d">Tip</th>
+          <th style="background:#1a202c;color:#fff">Total</th>
+        </tr></thead>
+        <tbody>${rowsHtmlFinal}</tbody>
+        <tfoot>
+          <tr class="sub-row">
+            <td colspan="5" style="padding:4px 8px">รวม ${brRecs.length} คน</td>
+            <td class="num">${fmt(sCom)}</td>
+            <td class="num">${fmt(sLvl)}</td>
+            <td class="num">${fmt(sOT)}</td>
+            <td class="num">${fmt(sR)}</td>
+            <td class="num">${fmt(sS)}</td>
+            <td class="num">${fmt(sTip)}</td>
+            <td class="num">${sTot.toLocaleString()}</td>
+          </tr>
+          <tr class="grand-row">
+            <td colspan="11" style="text-align:right;padding:5px 10px">ยอดรวม ${BR_LABEL[br]}</td>
+            <td class="num">฿${sTot.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+    </div>`;
+  }
+
+  // ── Grand total: sum directly from dayRecs (authoritative) ──────────────
+  // Use per-branch fields if present; fall back to totals for legacy records.
+  // This avoids under-counting when records only have r.OT (no r['OT_LS']).
+  let gCom=0, gOT=0, gR=0, gS=0, gLvl=0, gTip=0;
+  for (const r of dayRecs) {
+    gCom += BRANCHES.reduce((s,b) => s+(r[b]||0), 0);
+    gOT  += r.OT    || 0;
+    gR   += r.R     || 0;
+    gS   += r.S     || 0;
+    gLvl += r.Level || 0;
+    gTip += r.Tip   || 0;
+  }
+  const gTot = gCom + gOT + gR + gS + gLvl + gTip;
+  html += `<div style="background:#fefcbf;border:2px solid #b7791f;border-radius:8px;padding:10px 16px;
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:13px;font-weight:700;color:#1a202c">ยอดรวมทั้งหมด (ทุกสาขา)</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px">
+      ${gCom  ? `<span>Com <strong>${fmt(gCom)}</strong></span>` : ''}
+      ${gLvl  ? `<span style="color:#b7791f">Level฿ <strong>${fmt(gLvl)}</strong></span>` : ''}
+      ${gOT   ? `<span style="color:#276749">OT <strong>${fmt(gOT)}</strong></span>` : ''}
+      ${gR    ? `<span style="color:#2b4c8c">R <strong>${fmt(gR)}</strong></span>` : ''}
+      ${gS    ? `<span style="color:#744210">S <strong>${fmt(gS)}</strong></span>` : ''}
+      ${gTip  ? `<span style="color:#97266d">Tip <strong>${fmt(gTip)}</strong></span>` : ''}
+      <span style="font-size:14px;font-weight:800;color:#1a202c">= ฿${gTot.toLocaleString()}</span>
+    </div>
+  </div>`;
+
+  // ── Unknown employees (not in employee list) ──────────────
+  if (unknownRecs.length) {
+    const uTotal = unknownRecs.reduce((s,r) => s+(r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0)+(r.OT||0)+(r.R||0)+(r.S||0), 0);
+    html += `<div style="background:#fff5f5;border:2px solid #fc8181;border-radius:8px;padding:10px 16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#c53030;margin-bottom:8px">⚠️ พนักงานที่ไม่พบในระบบ (${unknownRecs.length} คน) — ไม่รวมในยอดรวม</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#fff5f5;color:#718096">
+          <th style="text-align:left;padding:4px 8px">Nick</th>
+          <th style="text-align:left;padding:4px 8px">ชื่อจริง</th>
+          <th style="text-align:right;padding:4px 8px">Com รวม</th>
+        </tr></thead>
+        <tbody>
+          ${unknownRecs.map(r => {
+            const com = (r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0);
+            return `<tr style="border-top:1px solid #fed7d7">
+              <td style="padding:3px 8px;font-weight:700;color:#c53030">${escHtml(r.nick)}</td>
+              <td style="padding:3px 8px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+              <td style="padding:3px 8px;text-align:right">${com ? com.toLocaleString() : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  return html;
+}
+
+function _bdtToggle(btn) {
+  const wrap = btn.closest('.bdt-section').querySelector('.bdt-wrap');
+  if (!wrap) return;
+  const open = wrap.classList.toggle('open');
+  btn.textContent = open ? '▼' : '▶';
+}
+function _bdtToggleAll(btn) {
+  const container = btn.closest('div').nextElementSibling;
+  if (!container) return;
+  // ดูว่าตอนนี้เปิดอยู่ไหม
+  const anyOpen = document.querySelectorAll('.bdt-wrap.open').length > 0;
+  document.querySelectorAll('.bdt-wrap').forEach(w => {
+    w.classList.toggle('open', !anyOpen);
+  });
+  document.querySelectorAll('.bdt-section .bdt-toggle-btn').forEach(b => {
+    b.textContent = anyOpen ? '▶' : '▼';
+  });
+  btn.textContent = anyOpen ? '▼ แสดงทั้งหมด' : '▼ ซ่อนทั้งหมด';
+}
+
+// ── Branch table edit helpers ────────────────────────
+// Toggle edit mode for one branch
+function _bdtToggleEdit(br) {
+  if (_bdtEditing[br]) {
+    // Currently editing → Save
+    _bdtSave(br);
+  } else {
+    // Enter edit mode
+    _bdtEditing[br] = true;
+    _bdtEdits[br]   = {};
+    _ddpRender();
+  }
+}
+
+// Cancel edit for one branch
+function _bdtCancelEdit(br) {
+  _bdtEditing[br] = false;
+  _bdtEdits[br]   = {};
+  _ddpRender();
+}
+
+// Move a row from one branch to another
+function _bdtMoveRow(mi, fromBr, toBr) {
+  if (!toBr || toBr === fromBr) return;
+  const r = masterRecords[mi];
+  if (!r) return;
+  const BLIST = ['LS','AS','SK','LP','OS'];
+
+  // Move commission and OT/R/S values from source to target branch
+  r[toBr]          = (r[toBr]||0)          + (r[fromBr]||0);
+  r['OT_'+toBr]    = (r['OT_'+toBr]||0)    + (r['OT_'+fromBr]||0);
+  r['R_'+toBr]     = (r['R_'+toBr]||0)     + (r['R_'+fromBr]||0);
+  r['S_'+toBr]     = (r['S_'+toBr]||0)     + (r['S_'+fromBr]||0);
+
+  // Clear source branch
+  r[fromBr]        = 0;
+  r['OT_'+fromBr]  = 0;
+  r['R_'+fromBr]   = 0;
+  r['S_'+fromBr]   = 0;
+
+  // Recalculate totals
+  r.OT = BLIST.reduce((s,b) => s+(r['OT_'+b]||0), 0);
+  r.R  = BLIST.reduce((s,b) => s+(r['R_'+b]||0),  0);
+  r.S  = BLIST.reduce((s,b) => s+(r['S_'+b]||0),  0);
+
+  // Exit edit mode for this branch and re-render
+  _bdtEditing[fromBr] = false;
+  _bdtEdits[fromBr]   = {};
+  msSaveLocal(true); // skipRefresh — _ddpRender() below handles UI update
+  msDirty = true;
+  _ddpRender();
+  showStatus('success', `✅ ย้าย ${r.nick} จาก ${fromBr} → ${toBr} แล้ว`);
+}
+
+// Live input handler for branch table cells
+function _bdtInput(el, br, mi, field) {
+  const val = +el.value || 0;
+  if (!_bdtEdits[br])    _bdtEdits[br]    = {};
+  if (!_bdtEdits[br][mi]) _bdtEdits[br][mi] = {};
+  _bdtEdits[br][mi][field] = val;
+
+  // Update row total live
+  const r   = masterRecords[mi];
+  const ed  = _bdtEdits[br][mi];
+  const legacy = !(['LS','AS','SK','LP','OS'].some(b =>
+    (r['OT_'+b]||0)>0||(r['R_'+b]||0)>0||(r['S_'+b]||0)>0
+  )) && (['LS','AS','SK','LP','OS'].reduce((best,b) =>
+    (r[b]||0)>(r[best]||0)?b:best,'LS')) === br;
+
+  const com = ('_br_com' in ed) ? ed._br_com : (r[br]||0);
+  const ot  = ('_br_ot'  in ed) ? ed._br_ot  : (legacy?(r.OT||0):(r['OT_'+br]||0));
+  const req = ('_br_r'   in ed) ? ed._br_r   : (legacy?(r.R||0) :(r['R_'+br]||0));
+  const sup = ('_br_s'   in ed) ? ed._br_s   : (legacy?(r.S||0) :(r['S_'+br]||0));
+  const lvl = ('Level'   in ed) ? ed.Level   : (r.Level||0);
+  const tip = ('Tip'     in ed) ? ed.Tip     : (r.Tip||0);
+  const totEl = document.getElementById(`bdt-tot-${br}-${mi}`);
+  if (totEl) totEl.textContent = (com+ot+req+sup+lvl+tip).toLocaleString();
+}
+
+// Save branch edits back to masterRecords
+function _bdtSave(br) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const edMap = _bdtEdits[br] || {};
+  for (const [miStr, changes] of Object.entries(edMap)) {
+    const mi = parseInt(miStr);
+    const r  = masterRecords[mi];
+    if (!r) continue;
+
+    // Update branch commission
+    if ('_br_com' in changes) r[br] = changes._br_com;
+
+    // Determine if legacy record (no per-branch OT/R/S stored yet)
+    const hasPerBranch = BRANCHES.some(b =>
+      (r['OT_'+b]||0)>0||(r['R_'+b]||0)>0||(r['S_'+b]||0)>0
+    );
+
+    // If this is a legacy record and ANY branch-specific field is being edited,
+    // promote it now: zero all other-branch OT/R/S so totals stay correct.
+    // This must run before the per-field updates below.
+    const editingBranchField = '_br_ot' in changes || '_br_r' in changes || '_br_s' in changes;
+    if (!hasPerBranch && editingBranchField) {
+      for (const b of BRANCHES) if (b !== br) { r['OT_'+b]=0; r['R_'+b]=0; r['S_'+b]=0; }
+    }
+
+    // Update per-branch OT/R/S
+    if ('_br_ot' in changes) r['OT_'+br] = changes._br_ot;
+    if ('_br_r'  in changes) r['R_'+br]  = changes._br_r;
+    if ('_br_s'  in changes) r['S_'+br]  = changes._br_s;
+
+    // Recalculate totals r.OT / r.R / r.S from per-branch sums
+    r.OT = BRANCHES.reduce((s,b) => s+(r['OT_'+b]||0), 0);
+    r.R  = BRANCHES.reduce((s,b) => s+(r['R_'+b] ||0), 0);
+    r.S  = BRANCHES.reduce((s,b) => s+(r['S_'+b] ||0), 0);
+
+    // Level and Tip are shared across branches
+    if ('Level' in changes) r.Level = changes.Level;
+    if ('Tip'   in changes) r.Tip   = changes.Tip;
+  }
+
+  msSaveLocal(true); // skipRefresh — _ddpRender() below updates UI
+  msDirty          = true;
+  _bdtEditing[br]  = false;
+  _bdtEdits[br]    = {};
+  _ddpRender();
+  showStatus('success', `✅ บันทึกแก้ไข ${BR_LABEL_MAP[br]} แล้ว`);
+}
+
+// Branch label map (used in _bdtSave status message)
+const BR_LABEL_MAP = {LS:'Langsuan : LS', AS:'Asoke : AS', SK:'Sukhumvit : SK', LP:'Lumpini : LP', OS:'Onsen : OS'};
+
+// ── input เปลี่ยนค่า ─────────────────────────────────
+function ddpInput(el) {
+  const mi    = parseInt(el.dataset.mi);
+  const field = el.dataset.field;
+  const val   = field === 'note' ? el.value : (+el.value || 0);
+  if (!_ddpEdits[mi]) _ddpEdits[mi] = {};
+  _ddpEdits[mi][field] = val;
+
+  if (field !== 'note') {
+    const r   = masterRecords[mi];
+    const ed  = _ddpEdits[mi];
+    const FIELDS = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+    const tot = FIELDS.reduce((s,f) => s + (f in ed ? ed[f] : (r[f]||0)), 0);
+    const el2 = document.getElementById(`ddp-tot-${mi}`);
+    if (el2) el2.textContent = numFmt(tot);
+  }
+}
+
+// ── drag-and-drop เลื่อนลำดับ ────────────────────────
+function _ddpInitDrag() {
+  const oldTbody = document.getElementById('ddp-tbody');
+  if (!oldTbody) return;
+  const tbody = oldTbody.cloneNode(true);
+  oldTbody.parentNode.replaceChild(tbody, oldTbody);
+
+  tbody.addEventListener('dragstart', e => {
+    const tr = e.target.closest('tr[data-pos]');
+    if (!tr) return;
+    _ddpDragSrc = parseInt(tr.dataset.pos);
+    tr.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  tbody.addEventListener('dragend', () => {
+    tbody.querySelectorAll('tr[data-pos]').forEach(r => {
+      r.style.opacity = '';
+      r.classList.remove('drag-over-top','drag-over-bottom');
+    });
+    _ddpDragSrc = null;
+  });
+  tbody.addEventListener('dragover', e => {
+    e.preventDefault();
+    const tr = e.target.closest('tr[data-pos]');
+    tbody.querySelectorAll('tr[data-pos]').forEach(r => r.classList.remove('drag-over-top','drag-over-bottom'));
+    if (!tr || _ddpDragSrc === null) return;
+    const mid = tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+    tr.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+  });
+  tbody.addEventListener('dragleave', e => {
+    const tr = e.target.closest('tr[data-pos]');
+    if (tr) tr.classList.remove('drag-over-top','drag-over-bottom');
+  });
+  tbody.addEventListener('drop', e => {
+    e.preventDefault();
+    const tr = e.target.closest('tr[data-pos]');
+    if (!tr || _ddpDragSrc === null) return;
+    const destPos = parseInt(tr.dataset.pos);
+    if (_ddpDragSrc === destPos) return;
+
+    const insertAfter = e.clientY >= tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+
+    // reorder masterRecords ตามลำดับใหม่
+    const destMi  = _ddpOrder[destPos];
+    const srcMi   = _ddpOrder.splice(_ddpDragSrc, 1)[0];
+    let newDest   = _ddpOrder.indexOf(destMi);
+    if (insertAfter) newDest += 1;
+    _ddpOrder.splice(newDest, 0, srcMi);
+
+    // Clear any pending edits before index rebuild — stale indices would corrupt data
+    _ddpEditing = false;
+    _ddpEdits   = {};
+
+    // สะท้อนลำดับใหม่กลับ masterRecords
+    const otherRecs = masterRecords.filter((_, i) => !_ddpOrder.includes(i));
+    const orderedRecs = _ddpOrder.map(i => masterRecords[i]);
+    masterRecords = [...orderedRecs, ...otherRecs];
+    // อัปเดต _ddpOrder ให้ชี้ index ใหม่
+    _ddpOrder = orderedRecs.map((_, i) => i);
+
+    _ddpDragSrc = null;
+    msSaveLocal(true); // skipRefresh — _ddpRender() below handles UI update
+    _ddpRefreshButtons();
+    _ddpRender();
+  });
+}
+
+// ── ปุ่ม "ยอดรวม" → เปิด Modal ยอดรวมทุกวัน ──────────
+let _ddpShowTotal = false; // ไม่ใช้แล้ว แต่คงไว้เผื่อ ref
+function ddpToggleTotal() {
+  openAllTotalModal();
+}
+
+function openAllTotalModal() {
+  const modal = document.getElementById('all-total-modal');
+  if (!modal) return;
+
+  const FIELDS   = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+  const CO_KEY   = { Sinsub:'sinsub', Sukjai:'sukjai', Happines:'happines' };
+
+  // รวมยอดต่อ nick ทั้งหมด
+  const byNick = {};
+  for (const r of masterRecords) {
+    const nick = r.nick;
+    if (!byNick[nick]) byNick[nick] = { nick, fullName: r.fullName||r.nick, company: r.company||'?', isOsLevel: r.isOsLevel, ...Object.fromEntries(FIELDS.map(f=>[f,0])) };
+    FIELDS.forEach(f => { byNick[nick][f] += r[f]||0; });
+  }
+
+  // จัดกลุ่ม
+  const byCompany = {};
+  COMPANIES.forEach(c => byCompany[c] = []);
+  Object.values(byNick).forEach(row => {
+    const co = COMPANIES.slice(0,3).includes(row.company) ? row.company : '?';
+    byCompany[co].push(row);
+  });
+
+  // หา period
+  const allDates = [...new Set(masterRecords.map(r=>(r.date||'').split(',').map(s=>s.trim())).flat().filter(Boolean))].sort();
+  const periodTxt = allDates.length ? `${allDates[0]} – ${allDates[allDates.length-1]} · ${allDates.length} วัน · ${Object.keys(byNick).length} คน` : '';
+  document.getElementById('all-total-period').textContent = periodTxt;
+
+  let html = `<thead><tr>
+    <th class="th-left" style="min-width:80px">Nick</th>
+    <th class="th-left" style="min-width:100px">ชื่อจริง</th>
+    <th class="th-left">Co.</th>
+    <th>LS</th><th>AS</th><th>SK</th><th>LP</th><th>OS</th>
+    <th>OT</th><th>R</th><th>S</th>
+    <th style="color:#f6ad55">Level฿</th>
+    <th style="color:#f6ad55">Tip</th>
+    <th style="background:#0d2d1a;color:white">Total</th>
+  </tr></thead><tbody>`;
+
+  let gLS=0,gAS=0,gSK=0,gLP=0,gOS=0,gOT=0,gR=0,gS=0,gLv=0,gTip=0;
+
+  for (const co of COMPANIES) {
+    const rows = byCompany[co];
+    if (!rows.length) continue;
+    const coKey   = CO_KEY[co] || 'unknown';
+    const coLabel = { Sinsub:'SINSUB', Sukjai:'SUKJAI', Happines:'HAPPINES', '?':'ไม่ทราบ' }[co];
+    html += `<tr><td colspan="14" class="co-hdr-${coKey}" style="color:white;font-size:11px;font-weight:700;padding:4px 8px">${coLabel}</td></tr>`;
+
+    let sLS=0,sAS=0,sSK=0,sLP=0,sOS=0,sOT=0,sR=0,sS=0,sLv=0,sTip=0;
+    for (const row of rows) {
+      const tot = FIELDS.reduce((s,f)=>s+row[f],0);
+      const osTag = row.isOsLevel ? '<span style="font-size:9px;background:#fed7d7;color:#c53030;border-radius:3px;padding:1px 3px;margin-left:2px">OS</span>' : '';
+      const fmt = v => v ? `<span style="color:#2d3748">${numFmt(v)}</span>` : `<span style="color:#e2e8f0">—</span>`;
+      html += `<tr class="co-${coKey}">
+        <td style="text-align:left;padding:5px 8px"><strong>${escHtml(row.nick)}</strong>${osTag}</td>
+        <td style="font-size:11px;color:#4a5568;text-align:left;padding:5px 8px">${escHtml(row.fullName)}</td>
+        <td style="font-size:10px;color:#718096">${row.company||'?'}</td>
+        ${FIELDS.map(f=>`<td class="num">${fmt(row[f])}</td>`).join('')}
+        <td class="num" style="font-weight:700;background:#0d2d1a;color:white">${numFmt(tot)}</td>
+      </tr>`;
+      sLS+=row.LS; sAS+=row.AS; sSK+=row.SK; sLP+=row.LP; sOS+=row.OS;
+      sOT+=row.OT; sR+=row.R; sS+=row.S; sLv+=row.Level; sTip+=row.Tip;
+    }
+    const sTot=sLS+sAS+sSK+sLP+sOS+sOT+sR+sS+sLv+sTip;
+    html += `<tr class="sub-row">
+      <td colspan="3" style="padding:4px 8px;text-align:left">รวม ${rows.length} คน</td>
+      <td class="num">${numFmt(sLS)}</td><td class="num">${numFmt(sAS)}</td>
+      <td class="num">${numFmt(sSK)}</td><td class="num">${numFmt(sLP)}</td>
+      <td class="num">${numFmt(sOS)}</td><td class="num">${numFmt(sOT)}</td>
+      <td class="num">${numFmt(sR)}</td><td class="num">${numFmt(sS)}</td>
+      <td class="num">${numFmt(sLv)}</td><td class="num">${numFmt(sTip)}</td>
+      <td class="num" style="background:#0d2d1a;color:white">${numFmt(sTot)}</td>
+    </tr>`;
+    gLS+=sLS; gAS+=sAS; gSK+=sSK; gLP+=sLP; gOS+=sOS;
+    gOT+=sOT; gR+=sR; gS+=sS; gLv+=sLv; gTip+=sTip;
+  }
+
+  const gTot=gLS+gAS+gSK+gLP+gOS+gOT+gR+gS+gLv+gTip;
+  html += `<tr class="grand-row">
+    <td colspan="3" style="padding:6px 8px;text-align:left">ยอดรวมทั้งหมด</td>
+    <td class="num">${numFmt(gLS)}</td><td class="num">${numFmt(gAS)}</td>
+    <td class="num">${numFmt(gSK)}</td><td class="num">${numFmt(gLP)}</td>
+    <td class="num">${numFmt(gOS)}</td><td class="num">${numFmt(gOT)}</td>
+    <td class="num">${numFmt(gR)}</td><td class="num">${numFmt(gS)}</td>
+    <td class="num">${numFmt(gLv)}</td><td class="num">${numFmt(gTip)}</td>
+    <td class="num" style="font-size:13px">฿${gTot.toLocaleString()}</td>
+  </tr></tbody>`;
+
+  document.getElementById('all-total-tbl').innerHTML = html;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAllTotalModal() {
+  const modal = document.getElementById('all-total-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ── โหมดแก้ไข ────────────────────────────────────────
+function ddpToggleEdit() {
+  _ddpEditing = true;
+  _ddpEdits   = {};
+  _ddpRefreshButtons();
+  _ddpRender();
+}
+
+function ddpCancelEdit() {
+  _ddpEditing = false;
+  _ddpEdits   = {};
+  _ddpRefreshButtons();
+  _ddpRender();
+}
+
+function ddpSave() {
+  for (const [miStr, changes] of Object.entries(_ddpEdits)) {
+    const mi = parseInt(miStr);
+    if (masterRecords[mi]) Object.assign(masterRecords[mi], changes);
+  }
+  msSaveLocal(true); // skipRefresh — _ddpRender() and msRenderTable() below handle UI update
+  msDirty      = true;
+  _ddpEdits    = {};
+  _ddpEditing  = false;
+  _ddpRefreshButtons();
+  _ddpRender();
+  msRenderTable();
+  showStatus('success', `✅ บันทึกแก้ไขวันที่ ${_ddpIso} แล้ว`);
+}
+
+// ── ลบแถวเดียว ───────────────────────────────────────
+function ddpDeleteRow(mi) {
+  if (!confirm(`ลบข้อมูล "${masterRecords[mi]?.nick}" ออกจากวันนี้?`)) return;
+  // Exit edit mode first — indices shift after splice and stale _ddpEdits would corrupt data
+  _ddpEditing = false;
+  _ddpEdits   = {};
+  masterRecords.splice(mi, 1);
+  msSaveLocal(true); // skipRefresh — msRefreshUI() called below
+  msDirty    = true;
+  _ddpOrder  = _ddpGetIndices(_ddpIso);
+  if (!_ddpOrder.length) {
+    document.getElementById('day-detail-panel').style.display = 'none';
+    _ddpIso = null;
+  } else {
+    _ddpRefreshButtons();
+    _ddpRender();
+  }
+  msRefreshUI();
+  msRenderTable();
+}
+
+// ── ลบทั้งวัน ─────────────────────────────────────────
+function ddpDeleteDay() {
+  const iso = _ddpIso;
+  if (!confirm(`ลบข้อมูลทั้งหมดของวันที่ ${iso}?`)) return;
+  masterRecords = masterRecords.filter(r => !(r.date||'').split(',').map(s=>s.trim()).includes(iso));
+  msSaveLocal();
+  msDirty = true;
+  document.getElementById('day-detail-panel').style.display = 'none';
+  _ddpIso = null;
+  msRefreshUI();
+  msRenderTable();
+  showStatus('success', `🗑 ลบข้อมูลวันที่ ${iso} แล้ว`);
+}
+
+function msRenderTable() { /* ไม่ใช้แล้ว — ใช้ Day Detail Panel แทน */ }
+
+// ─── msHandleFiles: อัปโหลดไฟล์ใน Master tab (preview ก่อน confirm) ────────
+async function msHandleFiles(fileList) {
+  const files = Array.from(fileList);
+  if (!files.length) return;
+  const dp = document.getElementById('ms-diff-panel');
+  dp.style.display = 'block';
+  dp.innerHTML = '<p style="color:#718096;font-size:13px">⏳ กำลังอ่านไฟล์...</p>';
+
+  // Parse all files → group raw records by ISO date
+  const byDate = {};
+  let declaredFrom = null, declaredTo = null;
+  for (const file of files) {
+    const result = await parsePayrollFile(file);
+    const raw = result.records || result; // fallback if old shape
+    if (result.declaredFrom) declaredFrom = result.declaredFrom;
+    if (result.declaredTo)   declaredTo   = result.declaredTo;
+    for (const rec of raw) {
+      const iso = rec.saleDate instanceof Date && !isNaN(rec.saleDate)
+        ? dateToISO(rec.saleDate) : null;
+      if (!iso) continue;
+      if (!byDate[iso]) byDate[iso] = { recs: [], source: file.name };
+      byDate[iso].recs.push(rec);
+    }
+  }
+
+  // Build one master record per date+nick
+  const __BLIST = ['LS','AS','SK','LP','OS'];
+  const newRecs = [];
+  for (const iso of Object.keys(byDate).sort()) {
+    const rows = _buildRowsFromRecs(byDate[iso].recs);
+    for (const row of rows) {
+      const rec = {
+        id: genId(), date: iso,
+        nick: row.nick, fullName: row.fullName,
+        company: row.company, level: row.level,
+        LS:row.LS, AS:row.AS, SK:row.SK, LP:row.LP, OS:row.OS,
+        R:row.R, OT:row.OT, S:row.S, Level:0, Tip:0,
+        isOsLevel:row.isOsLevel, note:'',
+        source: byDate[iso].source,
+      };
+      for (const b of __BLIST) { rec['OT_'+b]=row['OT_'+b]||0; rec['R_'+b]=row['R_'+b]||0; rec['S_'+b]=row['S_'+b]||0; }
+      newRecs.push(rec);
+    }
+  }
+
+  if (!newRecs.length) { dp.innerHTML = '<p style="color:#c53030">❌ ไม่พบข้อมูล Therapist</p>'; return; }
+
+  const sortedDates = Object.keys(byDate).sort();
+  const existKeys   = new Set(masterRecords.map(r => r.date+'|'+r.nick));
+  const addRecs     = newRecs.filter(r => !existKeys.has(r.date+'|'+r.nick));
+  const dupRecs     = newRecs.filter(r =>  existKeys.has(r.date+'|'+r.nick));
+  const allNicks    = new Set(newRecs.map(r => r.nick));
+  const grandTotal  = newRecs.reduce((s,r)=>s+r.LS+r.AS+r.SK+r.LP+r.OS+r.OT+r.R+r.S, 0);
+
+  window._msPendingRecs = newRecs;
+
+  // ── Single date: compact diff ──────────────────────────────
+  if (sortedDates.length === 1) {
+    const iso = sortedDates[0];
+    let dh = `<h4>📋 Preview — ${_isoToThai(iso)} · ${newRecs.length} records</h4>`;
+    if (addRecs.length) {
+      dh += `<div style="margin-bottom:6px;font-size:12px;color:#276749;font-weight:600">✅ ใหม่ ${addRecs.length} records</div>`;
+      addRecs.slice(0,10).forEach(r => { dh += `<div class="diff-item add">➕ ${r.nick} · ฿${(r.LS+r.AS+r.SK+r.LP+r.OS+r.OT+r.R+r.S).toLocaleString()}</div>`; });
+      if (addRecs.length > 10) dh += `<div class="diff-item add">... และอีก ${addRecs.length-10} records</div>`;
+    }
+    if (dupRecs.length) {
+      dh += `<div style="margin:8px 0 6px;font-size:12px;color:#c53030;font-weight:600">⚠️ Replace ${dupRecs.length} records</div>`;
+      dupRecs.slice(0,5).forEach(r => { dh += `<div class="diff-item dup">🔄 ${r.nick}</div>`; });
+      if (dupRecs.length > 5) dh += `<div class="diff-item dup">... และอีก ${dupRecs.length-5} records</div>`;
+    }
+    dh += `<div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-action btn-green" id="ms-confirm-btn">✅ ยืนยัน Merge</button>
+      <button class="btn-action btn-gray" onclick="msCancelMerge()">✕ ยกเลิก</button>
+    </div>`;
+    dp.innerHTML = dh;
+    dp.querySelector('#ms-confirm-btn').onclick = () => msConfirmMerge(window._msPendingRecs);
+    return;
+  }
+
+  // ── Multi-date: day-card diff ──────────────────────────────
+  const d0 = sortedDates[0], d1 = sortedDates[sortedDates.length-1];
+
+  // ── File Quality Validation ──────────────────────────────
+  let validationHtml = '';
+  if (declaredFrom && declaredTo) {
+    const dfStr = declaredFrom.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const dtStr = declaredTo.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const warnings = [];
+
+    // 1. Dates in data that fall outside the declared period
+    const outsideDates = sortedDates.filter(iso => {
+      const d = new Date(iso);
+      return d < declaredFrom || d > declaredTo;
+    });
+    if (outsideDates.length) {
+      warnings.push(`<div style="margin-bottom:6px">
+        <strong>⚠️ พบวันที่นอกช่วงที่ประกาศ (${outsideDates.length} วัน):</strong>
+        <div style="margin-top:4px;font-size:11px;color:#744210">${outsideDates.map(_isoToThai).join(', ')}</div>
+      </div>`);
+    }
+
+    // 2. Missing dates within the declared period (skip weekends optional — show all gaps)
+    const missingDates = [];
+    let cur = new Date(declaredFrom);
+    const end = new Date(declaredTo);
+    while (cur <= end) {
+      const iso = dateToISO(cur);
+      if (!byDate[iso]) missingDates.push(iso);
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (missingDates.length) {
+      const shown = missingDates.slice(0, 10).map(_isoToThai).join(', ');
+      const more  = missingDates.length > 10 ? ` ... และอีก ${missingDates.length - 10} วัน` : '';
+      warnings.push(`<div>
+        <strong>⚠️ วันที่หายไปในช่วงที่ประกาศ (${missingDates.length} วัน):</strong>
+        <div style="margin-top:4px;font-size:11px;color:#744210">${shown}${more}</div>
+      </div>`);
+    }
+
+    if (warnings.length) {
+      validationHtml = `<div style="background:#fffbeb;border:1px solid #f6ad55;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#744210">
+        <div style="font-weight:700;margin-bottom:8px">🔍 ตรวจสอบคุณภาพไฟล์ — ช่วงที่ประกาศ: ${dfStr} – ${dtStr}</div>
+        ${warnings.join('')}
+        <div style="margin-top:8px;font-size:11px;color:#92400e">กรุณาตรวจสอบก่อน Confirm Merge</div>
+      </div>`;
+    } else {
+      validationHtml = `<div style="background:#f0faf5;border:1px solid #68d391;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:12px;color:#276749">
+        ✅ ข้อมูลครบถ้วนตามช่วงที่ประกาศ: ${dfStr} – ${dtStr}
+      </div>`;
+    }
+  }
+
+  let dh = `<h4>📋 Preview — ${_isoToThai(d0)} – ${_isoToThai(d1)}</h4>${validationHtml}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <span style="font-size:12px;background:#f0faf5;border:1px solid #68d391;border-radius:6px;padding:4px 10px;color:#276749"><strong>${sortedDates.length}</strong> วัน</span>
+    <span style="font-size:12px;background:#f0faf5;border:1px solid #68d391;border-radius:6px;padding:4px 10px;color:#276749"><strong>${allNicks.size}</strong> พนักงาน</span>
+    <span style="font-size:12px;background:#f0faf5;border:1px solid #68d391;border-radius:6px;padding:4px 10px;color:#276749">฿<strong>${grandTotal.toLocaleString()}</strong></span>
+    ${dupRecs.length ? `<span style="font-size:12px;background:#fffbeb;border:1px solid #f6ad55;border-radius:6px;padding:4px 10px;color:#744210">⚠️ replace <strong>${dupRecs.length}</strong> records</span>` : ''}
+  </div>
+  <div class="multidate-grid">`;
+
+  const dupDates = new Set(dupRecs.map(r => r.date));
+  for (const iso of sortedDates) {
+    const dayRecs  = newRecs.filter(r => r.date === iso);
+    const dayTotal = dayRecs.reduce((s,r)=>s+r.LS+r.AS+r.SK+r.LP+r.OS+r.OT+r.R+r.S, 0);
+    const hasDup   = dupDates.has(iso);
+    const BLIST2 = ['LS','AS','SK','LP','OS'];
+    const brSum2 = BLIST2.map(b => {
+      const bt = dayRecs.reduce((s,r)=>s+(r[b]||0),0);
+      return bt > 0 ? `<span style="font-size:10px;background:rgba(255,255,255,0.25);border-radius:4px;padding:1px 5px;font-weight:600">${b}</span>` : '';
+    }).filter(Boolean).join('<span style="color:rgba(255,255,255,0.4);margin:0 1px">·</span>');
+    dh += `<div class="md-day-card${hasDup?' dup-warn':''}" style="cursor:default">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1" onclick="event.stopPropagation()">
+          <input type="checkbox" class="ms-day-check" data-iso="${iso}" checked
+            style="width:15px;height:15px;cursor:pointer;accent-color:#276749"
+            onchange="_msUpdateMergeStats()">
+          <span style="font-size:12px;font-weight:700;color:#1a202c">📅 ${_isoToThai(iso)}</span>
+        </label>
+        <span class="md-day-badge ${hasDup?'dup':'new'}" style="position:static;margin:0">${hasDup?'replace':'new'}</span>
+      </div>
+      <div style="font-size:11px;color:#4a5568;margin:4px 0 2px">${dayRecs.length} คน · ฿${dayTotal.toLocaleString()}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${brSum2}</div>
+    </div>`;
+  }
+  dh += `</div>
+  <div style="display:flex;gap:10px;margin-top:16px">
+    <button class="btn-action btn-green" id="ms-confirm-btn">✅ ยืนยัน Merge ทั้งหมด</button>
+    <button class="btn-action btn-gray" onclick="msCancelMerge()">✕ ยกเลิก</button>
+  </div>`;
+  dp.innerHTML = dh;
+  dp.querySelector('#ms-confirm-btn').onclick = () => msConfirmMerge(window._msPendingRecs);
+}
+
+// ─── _msUpdateMergeStats ─────────────────────────────────────────────────────
+function _msUpdateMergeStats() {
+  if (!window._msPendingRecs) return;
+  const checked = new Set([...document.querySelectorAll('.ms-day-check:checked')].map(el => el.dataset.iso));
+  const filtered = window._msPendingRecs.filter(r => checked.has(r.date));
+  const nicks = new Set(filtered.map(r => r.nick));
+  const total = filtered.reduce((s,r)=>s+(r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0)+(r.OT||0)+(r.R||0)+(r.S||0), 0);
+  // Update summary badges inside diff panel if they exist
+  const dp = document.getElementById('ms-diff-panel');
+  if (!dp) return;
+  const daysBadge = dp.querySelector('[data-ms-stat="days"]');
+  const empBadge  = dp.querySelector('[data-ms-stat="emp"]');
+  const totBadge  = dp.querySelector('[data-ms-stat="total"]');
+  if (daysBadge) daysBadge.textContent = checked.size;
+  if (empBadge)  empBadge.textContent  = nicks.size;
+  if (totBadge)  totBadge.textContent  = '฿' + total.toLocaleString();
+}
+
+// ─── msConfirmMerge ──────────────────────────────────────────────────────────
+function msConfirmMerge(recs) {
+  if (!recs || !recs.length) return;
+  // Filter to only checked dates
+  const checkedIsos = new Set([...document.querySelectorAll('.ms-day-check:checked')].map(el => el.dataset.iso));
+  if (checkedIsos.size > 0) {
+    recs = recs.filter(r => checkedIsos.has(r.date));
+  }
+  if (!recs.length) { showStatus('error','❌ ไม่มีวันที่เลือก'); return; }
+  // Remove ALL existing records for these dates (full-day replace), then add new
+  const removeDates = new Set(
+    recs.flatMap(r => (r.date||'').split(',').map(s => s.trim()))
+  );
+  masterRecords = masterRecords.filter(r =>
+    !(r.date||'').split(',').map(s=>s.trim()).some(d => removeDates.has(d))
+  );
+  masterRecords.push(...recs);
+  masterRecords.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  msSaveLocal();
+  msDirty = true;
+  window._msPendingRecs = null;
+  payrollFiles.length = 0;
+  const _fi1 = document.getElementById('ms-file-input');
+  if (_fi1) _fi1.value = '';
+  renderPayrollList();
+  const dp = document.getElementById('ms-diff-panel');
+  if (dp) dp.innerHTML = `<div style="color:#276749;font-size:13px;font-weight:600">✅ Merge เสร็จแล้ว — เพิ่ม/แทนที่ ${recs.length} records</div>`;
+  msRefreshUI();
+  ghSilentPushIfConfigured();
+  showStatus('success', `✅ Merge ${recs.length} records เสร็จแล้ว`);
+}
+
+// ─── msCancelMerge ───────────────────────────────────────────────────────────
+function msCancelMerge() {
+  window._msPendingRecs = null;
+  payrollFiles.length = 0;
+  const _fi2 = document.getElementById('ms-file-input');
+  if (_fi2) _fi2.value = '';
+  renderPayrollList();
+  const dp = document.getElementById('ms-diff-panel');
+  if (dp) { dp.innerHTML = ''; dp.style.display = 'none'; }
+  showStatus('info','ยกเลิก Merge แล้ว');
+}
+
+// ─── msClearAll ──────────────────────────────────────────────────────────────
+function msClearAll() {
+  if (!confirm('⚠️ ลบข้อมูล Master ทั้งหมด? ไม่สามารถกู้คืนได้')) return;
+  masterRecords = [];
+  msSaveLocal();
+  msDirty = false;
+  msRefreshUI();
+  const ddp = document.getElementById('day-detail-panel');
+  if (ddp) ddp.style.display = 'none';
+  _ddpIso = null;
+  showStatus('info','🗑 ล้างข้อมูล Master แล้ว');
+}
+
+// ─── GitHub helpers ──────────────────────────────────────────────────────────
+function ghGetConfig() {
+  return {
+    token:  localStorage.getItem('gh_token')  || '',
+    repo:   localStorage.getItem('gh_repo')   || '',
+    branch: localStorage.getItem('gh_branch') || 'main',
+    path:   localStorage.getItem('gh_path')   || 'data/master_summary.json',
+  };
+}
+
+function ghLoadSettings() {
+  const cfg = ghGetConfig();
+  const t = document.getElementById('gh-token');
+  const r = document.getElementById('gh-repo');
+  const b = document.getElementById('gh-branch');
+  const p = document.getElementById('gh-path');
+  if (t) t.value = cfg.token;
+  if (r) r.value = cfg.repo;
+  if (b) b.value = cfg.branch;
+  if (p) p.value = cfg.path;
+}
+
+function ghSaveSettings() {
+  const token  = (document.getElementById('gh-token')?.value  || '').trim();
+  const repo   = (document.getElementById('gh-repo')?.value   || '').trim();
+  const branch = (document.getElementById('gh-branch')?.value || 'main').trim();
+  const path   = (document.getElementById('gh-path')?.value   || 'data/master_summary.json').trim();
+  localStorage.setItem('gh_token',  token);
+  localStorage.setItem('gh_repo',   repo);
+  localStorage.setItem('gh_branch', branch);
+  localStorage.setItem('gh_path',   path);
+  _ghSetStatus('ok', '💾 บันทึกแล้ว');
+}
+
+function _ghSetStatus(type, msg) {
+  const wrap = document.getElementById('gh-status-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = `<span class="gh-status ${type}">${msg}</span>`;
+}
+
+function _ghSetSyncBadge(label, color) {
+  const dot   = document.getElementById('gh-sync-dot');
+  const lbl   = document.getElementById('gh-sync-label');
+  const badge = document.getElementById('gh-sync-badge');
+  if (dot)   dot.style.background = color || '#cbd5e0';
+  if (lbl)   lbl.textContent = label;
+  if (badge) badge.style.display = 'flex';
+}
+
+async function ghFetch() {
+  const { token, repo, branch, path } = ghGetConfig();
+  if (!token || !repo) { _ghSetStatus('err', '❌ กรุณากรอก Token และ Repository ก่อน'); return; }
+  if (msDirty && masterRecords.length > 0) {
+    if (!confirm('⚠️ มีการแก้ไขข้อมูลในเครื่องที่ยังไม่ได้ Push\nการดึงข้อมูลจาก GitHub จะเขียนทับการแก้ไขเหล่านั้น\n\nต้องการดำเนินการต่อหรือไม่?')) return;
+  }
+  _ghSetStatus('info', '⏳ กำลังดึงข้อมูลจาก GitHub...');
+  try {
+    const url = `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`;
+    const res = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+    if (!res.ok) {
+      if (res.status === 404) { _ghSetStatus('info', 'ℹ️ ยังไม่มีไฟล์ใน GitHub — ใช้ข้อมูลในเครื่อง'); return; }
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const content = JSON.parse(atob(json.content.replace(/\n/g,'')));
+    if (Array.isArray(content) && content.length) {
+      // Merge: keep local records not in remote, add remote records
+      const remoteKeys = new Set(content.map(r => r.date+'|'+r.nick));
+      const localOnly  = masterRecords.filter(r => !remoteKeys.has(r.date+'|'+r.nick));
+      masterRecords = [...content, ...localOnly];
+      masterRecords.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+      msSaveLocal();
+      msRefreshUI();
+      _ghSetStatus('ok', `✅ ดึงข้อมูลจาก GitHub แล้ว — ${content.length} records`);
+      _ghSetSyncBadge('synced from GitHub', '#68d391');
+    } else {
+      _ghSetStatus('info', 'ℹ️ ไฟล์ใน GitHub ว่างเปล่า');
+    }
+    window._ghSha = json.sha;
+  } catch(e) {
+    _ghSetStatus('err', `❌ ดึงข้อมูลล้มเหลว: ${e.message}`);
+  }
+}
+
+async function ghPush() {
+  const { token, repo, branch, path } = ghGetConfig();
+  if (!token || !repo) { _ghSetStatus('err', '❌ กรุณากรอก Token และ Repository ก่อน'); return; }
+  _ghSetStatus('info', '⏳ กำลัง Push ไปยัง GitHub...');
+  try {
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(masterRecords, null, 2))));
+    const body = { message: `Update master summary ${new Date().toISOString().slice(0,10)}`, content, branch };
+    if (window._ghSha) body.sha = window._ghSha;
+    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    window._ghSha = json.content?.sha;
+    msDirty = false;
+    _ghSetStatus('ok', `✅ Push สำเร็จ — ${masterRecords.length} records`);
+    _ghSetSyncBadge(`pushed ${new Date().toLocaleTimeString('th-TH')}`, '#68d391');
+  } catch(e) {
+    _ghSetStatus('err', `❌ Push ล้มเหลว: ${e.message}`);
+  }
+}
+
+async function ghSilentPushIfConfigured() {
+  const { token, repo } = ghGetConfig();
+  if (!token || !repo) return;
+  try { await ghPush(); } catch(e) { /* silent */ }
+}
+
+function ghToggleCollapse() {
+  const wrap = document.getElementById('gh-form-wrap');
+  const btn  = document.getElementById('gh-collapse-btn');
+  if (!wrap) return;
+  const collapsed = wrap.style.display === 'none';
+  wrap.style.display = collapsed ? '' : 'none';
+  if (btn) btn.textContent = collapsed ? '▲' : '▼';
+}
+
+// ─── masterExportExcel ───────────────────────────────────────────────────────
+async function masterExportExcel() {
+  if (!masterRecords.length) { showStatus('error','ไม่มีข้อมูลให้ Export'); return; }
+  if (typeof ExcelJS === 'undefined') { showStatus('error','ExcelJS ยังโหลดไม่เสร็จ กรุณารอสักครู่แล้วลองใหม่'); return; }
+
+  showStatus('info','⏳ กำลัง Export...');
+
+  const BRANCHES  = ['LS','AS','SK','LP','OS'];
+  const BR_NAME   = { LS:'Langsuan', AS:'Asoke', SK:'Sukhumvit', LP:'Lumpini', OS:'Onsen' };
+  const BR_COLOR  = { LS:'EAF1DD',   AS:'DAEEF3', SK:'FFE599',   LP:'F2DBDB', OS:'D9D2E9' };
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+  const CO_LABEL  = { Sinsub:'— SINSUB —', Sukjai:'— SUKJAI —', Happines:'— HAPPINES —', '?':'— ไม่ทราบบริษัท —' };
+  const CO_BG     = { Sinsub:'E2EFDA', Sukjai:'DEEAF1', Happines:'FCE4D6', '?':'FFE0E0' };
+
+  const _allDates = [...new Set(masterRecords.map(r=>(r.date||'').split(',').map(s=>s.trim())).flat().filter(Boolean))].sort();
+  const periodStr = _allDates.length ? `${_isoToThai(_allDates[0])} – ${_isoToThai(_allDates[_allDates.length-1])}` : 'DIORA Export';
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'DIORA App';
+  wb.created = new Date();
+
+  // ── style helpers ────────────────────────────────────────────────────────────
+  function bgFill(hex) {
+    return { type:'pattern', pattern:'solid', fgColor:{ argb:'FF'+hex }, bgColor:{ argb:'FFFFFFFF' } };
+  }
+  function border() {
+    const s = { style:'thin', color:{ argb:'FF000000' } };
+    return { top:s, bottom:s, left:s, right:s };
+  }
+  function hdrCell(ws, row, col, value, bgHex, bold=true, hAlign='center') {
+    const cell = ws.getCell(row, col);
+    cell.value = value;
+    cell.font  = { bold, name:'Calibri', size:11, color:{ argb:'FF000000' } };
+    cell.alignment = { horizontal:hAlign, vertical:'middle', wrapText:true };
+    cell.border = border();
+    if (bgHex) cell.fill = bgFill(bgHex);
+    return cell;
+  }
+  function numCell(ws, row, col, value, bgHex) {
+    const cell = ws.getCell(row, col);
+    cell.value = value || 0;
+    cell.numFmt = '#,##0';
+    cell.font   = { name:'Calibri', size:11 };
+    cell.alignment = { horizontal:'right', vertical:'middle' };
+    cell.border = border();
+    if (bgHex) cell.fill = bgFill(bgHex);
+    return cell;
+  }
+  function textCell(ws, row, col, value, bgHex, bold=false, hAlign='center') {
+    const cell = ws.getCell(row, col);
+    cell.value = value || '';
+    cell.font  = { bold, name:'Calibri', size:11 };
+    cell.alignment = { horizontal:hAlign, vertical:'middle' };
+    cell.border = border();
+    if (bgHex) cell.fill = bgFill(bgHex);
+    return cell;
+  }
+  function mergeRow(ws, row, c1, c2, value, bgHex, bold=true, hAlign='center') {
+    ws.mergeCells(row, c1, row, c2);
+    hdrCell(ws, row, c1, value, bgHex, bold, hAlign);
+    // fill merged empty cells style too
+    for (let c=c1+1; c<=c2; c++) {
+      const cell = ws.getCell(row, c);
+      cell.border = border();
+      if (bgHex) cell.fill = bgFill(bgHex);
+    }
+  }
+
+  // ── aggregate by nick (for summary sheet) ───────────────────────────────────
+  function aggregateByNick(recs) {
+    const map = {}, order = [];
+    for (const r of recs) {
+      if (!map[r.nick]) {
+        map[r.nick] = { nick:r.nick, fullName:r.fullName||r.nick, company:r.company||'?', level:r.level||'',
+                        LS:0,AS:0,SK:0,LP:0,OS:0,OT:0,R:0,S:0,Level:0,Tip:0 };
+        order.push(r.nick);
+      }
+      const nd = map[r.nick];
+      for (const br of BRANCHES) nd[br] += (r[br]||0);
+      nd.OT    += (r.OT||0);  nd.R  += (r.R||0);
+      nd.S     += (r.S||0);   nd.Level += (r.Level||0);
+      nd.Tip   += (r.Tip||0);
+    }
+    return order.map(n => map[n]);
+  }
+
+  // ── SUMMARY SHEET ────────────────────────────────────────────────────────────
+  // Cols: 1=No, 2=Company, 3=Level, 4=Name-Surname, 5=Nick,
+  //       6=LS,7=AS,8=SK,9=LP,10=OS,  11=Com รวม,
+  //       12=Level฿, 13=OT, 14=R, 15=S, 16=Tip, 17=Total
+  function buildSummarySheet(recs, sheetName) {
+    const ws = wb.addWorksheet(sheetName);
+    ws.views = [{ state:'frozen', ySplit:3 }];
+
+    // Row 1: Title
+    ws.mergeCells(1,1,1,17);
+    hdrCell(ws,1,1, `DIORA SPA — ${sheetName}  |  ${periodStr}`, '4472C4', true, 'left');
+    ws.getRow(1).height = 22;
+    ws.getCell(1,1).font = { bold:true, name:'Calibri', size:12, color:{ argb:'FFFFFFFF' } };
+
+    // Row 2: Section headers
+    mergeRow(ws,2,1,5,   '',                      null,    false);
+    mergeRow(ws,2,6,10,  'Commission per Branch', 'CCCCCC', true);
+    hdrCell(ws,2,11,     'ค่ามือรวม',             '93C47D', true);
+    mergeRow(ws,2,12,16, 'Including all branches','CCCCCC', true);
+    hdrCell(ws,2,17,     'รวมทั้งหมด',            '00FFFF', true);
+    ws.getRow(2).height = 18;
+
+    // Row 3: Column headers
+    const colH  = ['No','Company','Level','Name-Surname','Nick','LS','AS','SK','LP','OS','Com รวม','Level฿','OT','R','S','Tip','Total'];
+    const colBg = [null,null,null,null,null,'EAF1DD','DAEEF3','FFE599','F2DBDB','D9D2E9','93C47D','A2C4C9','8E7CC3','F6B26B','F9CB9C','FFF2CC','00FFFF'];
+    colH.forEach((h,i) => hdrCell(ws,3,i+1,h,colBg[i],true,'center'));
+    ws.getRow(3).height = 18;
+
+    // Column widths
+    const widths = [5,11,10,30,9,10,10,10,10,10,10,10,10,10,10,10,12];
+    widths.forEach((w,i) => { ws.getColumn(i+1).width = w; });
+
+    const nickRecs = aggregateByNick(recs);
+    let rowIdx = 4, no = 1;
+
+    for (const co of COMPANIES) {
+      const list = nickRecs.filter(r => (co==='?')
+        ? !['Sinsub','Sukjai','Happines'].includes(r.company)
+        : r.company === co);
+      if (!list.length) continue;
+
+      // Company header
+      mergeRow(ws, rowIdx, 2, 17, CO_LABEL[co], CO_BG[co], true, 'left');
+      textCell(ws, rowIdx, 1, '', CO_BG[co]);
+      ws.getRow(rowIdx).height = 16;
+      rowIdx++;
+
+      let sCom=0,sLS=0,sAS=0,sSK=0,sLP=0,sOS=0,sLvl=0,sOT=0,sR=0,sS=0,sTip=0;
+      for (const r of list) {
+        const com   = (r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0);
+        const total = com+(r.Level||0)+(r.OT||0)+(r.R||0)+(r.S||0)+(r.Tip||0);
+        const rowBg = (no%2===0) ? 'F2F2F2' : null;
+        numCell(ws,  rowIdx,1,  no++,      rowBg);
+        textCell(ws, rowIdx,2,  r.company, rowBg, false, 'center');
+        textCell(ws, rowIdx,3,  r.level,   rowBg, false, 'center');
+        textCell(ws, rowIdx,4,  r.fullName,rowBg, false, 'left');
+        textCell(ws, rowIdx,5,  r.nick,    rowBg, false, 'center');
+        numCell(ws,  rowIdx,6,  r.LS||0,   'EAF1DD');
+        numCell(ws,  rowIdx,7,  r.AS||0,   'DAEEF3');
+        numCell(ws,  rowIdx,8,  r.SK||0,   'FFE599');
+        numCell(ws,  rowIdx,9,  r.LP||0,   'F2DBDB');
+        numCell(ws,  rowIdx,10, r.OS||0,   'D9D2E9');
+        numCell(ws,  rowIdx,11, com,        '93C47D');
+        numCell(ws,  rowIdx,12, r.Level||0,'A2C4C9');
+        numCell(ws,  rowIdx,13, r.OT||0,   '8E7CC3');
+        numCell(ws,  rowIdx,14, r.R||0,    'F6B26B');
+        numCell(ws,  rowIdx,15, r.S||0,    'F9CB9C');
+        numCell(ws,  rowIdx,16, r.Tip||0,  'FFF2CC');
+        numCell(ws,  rowIdx,17, total,     '00FFFF');
+        sCom+=com; sLS+=(r.LS||0); sAS+=(r.AS||0); sSK+=(r.SK||0); sLP+=(r.LP||0); sOS+=(r.OS||0);
+        sLvl+=(r.Level||0); sOT+=(r.OT||0); sR+=(r.R||0); sS+=(r.S||0); sTip+=(r.Tip||0);
+        rowIdx++;
+      }
+
+      // Sub-total — columns 6-10 show per-branch sums (not hard-coded 0)
+      const sTotal = sCom+sLvl+sOT+sR+sS+sTip;
+      textCell(ws, rowIdx,1, '',        'D6E4BC', true);
+      mergeRow(ws, rowIdx,2,5, 'รวม '+co, 'D6E4BC', true, 'left');
+      numCell(ws,  rowIdx,6,  sLS,  'D6E4BC'); numCell(ws,rowIdx,7,sAS,'D6E4BC'); numCell(ws,rowIdx,8,sSK,'D6E4BC'); numCell(ws,rowIdx,9,sLP,'D6E4BC'); numCell(ws,rowIdx,10,sOS,'D6E4BC');
+      numCell(ws,  rowIdx,11, sCom,  'D6E4BC');
+      numCell(ws,  rowIdx,12, sLvl,  'D6E4BC');
+      numCell(ws,  rowIdx,13, sOT,   'D6E4BC');
+      numCell(ws,  rowIdx,14, sR,    'D6E4BC');
+      numCell(ws,  rowIdx,15, sS,    'D6E4BC');
+      numCell(ws,  rowIdx,16, sTip,  'D6E4BC');
+      numCell(ws,  rowIdx,17, sTotal,'D6E4BC');
+      ws.getRow(rowIdx).height = 16;
+      rowIdx++;
+    }
+
+    // Grand total (exclude '?')
+    const valid = nickRecs.filter(r=>['Sinsub','Sukjai','Happines'].includes(r.company));
+    const gCom  = valid.reduce((s,r)=>(r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0)+s, 0);
+    const gLvl  = valid.reduce((s,r)=>(r.Level||0)+s, 0);
+    const gOT   = valid.reduce((s,r)=>(r.OT||0)+s, 0);
+    const gR    = valid.reduce((s,r)=>(r.R||0)+s, 0);
+    const gS    = valid.reduce((s,r)=>(r.S||0)+s, 0);
+    const gTip  = valid.reduce((s,r)=>(r.Tip||0)+s, 0);
+    const gTotal= gCom+gLvl+gOT+gR+gS+gTip;
+    textCell(ws, rowIdx,1,'','4472C4',true);
+    mergeRow(ws, rowIdx,2,5,'ยอดรวมทั้งหมด','4472C4',true,'left');
+    ws.getCell(rowIdx,2).font = { bold:true, name:'Calibri', size:11, color:{ argb:'FFFFFFFF' } };
+    [6,7,8,9,10].forEach(c => numCell(ws,rowIdx,c,0,'4472C4'));
+    numCell(ws,rowIdx,11,gCom,  '4472C4'); numCell(ws,rowIdx,12,gLvl,'4472C4');
+    numCell(ws,rowIdx,13,gOT,   '4472C4'); numCell(ws,rowIdx,14,gR,  '4472C4');
+    numCell(ws,rowIdx,15,gS,    '4472C4'); numCell(ws,rowIdx,16,gTip,'4472C4');
+    numCell(ws,rowIdx,17,gTotal,'4472C4');
+    // white text for grand total
+    for (let c=1;c<=17;c++) {
+      const cell = ws.getCell(rowIdx,c);
+      if (cell.font) cell.font = { ...cell.font, color:{ argb:'FFFFFFFF' }, bold:true };
+    }
+    ws.getRow(rowIdx).height = 18;
+  }
+
+  // ── BRANCH SHEET ─────────────────────────────────────────────────────────────
+  // Cols: 1=No,2=Company,3=Level,4=Name-Surname,5=Nick,6=Com,7=Level฿,8=OT,9=R,10=S,11=Tip,12=Total
+  function buildBranchSheet(br, recs) {
+    const brName  = BR_NAME[br];
+    const brColor = BR_COLOR[br];
+    const ws = wb.addWorksheet(brName);
+    ws.views = [{ state:'frozen', ySplit:3 }];
+
+    // Aggregate by nick for this branch
+    const map = {}, order = [];
+    for (const r of recs) {
+      if (!map[r.nick]) {
+        map[r.nick] = { nick:r.nick, fullName:r.fullName||r.nick, company:r.company||'?', level:r.level||'',
+                        com:0, OT:0, R:0, S:0, Level:0, Tip:0 };
+        order.push(r.nick);
+      }
+      const nd = map[r.nick];
+      nd.com   += (r[br]||0);
+      nd.OT    += (r['OT_'+br]||0);
+      nd.R     += (r['R_'+br]||0);
+      nd.S     += (r['S_'+br]||0);
+      nd.Level += (r.Level||0);
+      nd.Tip   += (r.Tip||0);
+    }
+    const nickRecs = order.map(n=>map[n]).filter(r=>r.com||r.OT||r.R||r.S||r.Level||r.Tip);
+
+    // Row 1: Title
+    ws.mergeCells(1,1,1,12);
+    hdrCell(ws,1,1, `DIORA SPA — สาขา ${brName}  |  ${periodStr}`, brColor, true, 'left');
+    ws.getRow(1).height = 22;
+
+    // Row 2: Section headers
+    mergeRow(ws,2,1,5,'',null,false);
+    hdrCell(ws,2,6,  'Commission', brColor, true);
+    hdrCell(ws,2,7,  'Level฿',    'A2C4C9', true);
+    hdrCell(ws,2,8,  'OT',        '8E7CC3', true);
+    hdrCell(ws,2,9,  'R',         'F6B26B', true);
+    hdrCell(ws,2,10, 'S',         'F9CB9C', true);
+    hdrCell(ws,2,11, 'Tip',       'FFF2CC', true);
+    hdrCell(ws,2,12, 'รวมทั้งหมด','00FFFF', true);
+    ws.getRow(2).height = 18;
+
+    // Row 3: Column headers
+    const colH  = ['No','Company','Level','Name-Surname','Nick','Com','Level฿','OT','R','S','Tip','Total'];
+    const colBg = [null,null,null,null,null,brColor,'A2C4C9','8E7CC3','F6B26B','F9CB9C','FFF2CC','00FFFF'];
+    colH.forEach((h,i) => hdrCell(ws,3,i+1,h,colBg[i],true,'center'));
+    ws.getRow(3).height = 18;
+
+    const widths = [5,11,10,30,9,12,10,10,10,10,10,12];
+    widths.forEach((w,i) => { ws.getColumn(i+1).width = w; });
+
+    let rowIdx=4, no=1;
+    for (const co of COMPANIES) {
+      const list = nickRecs.filter(r=>(co==='?')
+        ? !['Sinsub','Sukjai','Happines'].includes(r.company)
+        : r.company===co);
+      if (!list.length) continue;
+
+      textCell(ws,rowIdx,1,'',CO_BG[co],true);
+      mergeRow(ws,rowIdx,2,12,CO_LABEL[co],CO_BG[co],true,'left');
+      ws.getRow(rowIdx).height = 16;
+      rowIdx++;
+
+      let sCom=0,sLvl=0,sOT=0,sR=0,sS=0,sTip=0;
+      for (const r of list) {
+        const total=(r.com||0)+(r.Level||0)+(r.OT||0)+(r.R||0)+(r.S||0)+(r.Tip||0);
+        const rowBg=(no%2===0)?'F2F2F2':null;
+        numCell(ws, rowIdx,1,no++,     rowBg);
+        textCell(ws,rowIdx,2,r.company,rowBg,false,'center');
+        textCell(ws,rowIdx,3,r.level,  rowBg,false,'center');
+        textCell(ws,rowIdx,4,r.fullName,rowBg,false,'left');
+        textCell(ws,rowIdx,5,r.nick,   rowBg,false,'center');
+        numCell(ws, rowIdx,6, r.com||0, brColor);
+        numCell(ws, rowIdx,7, r.Level||0,'A2C4C9');
+        numCell(ws, rowIdx,8, r.OT||0,  '8E7CC3');
+        numCell(ws, rowIdx,9, r.R||0,   'F6B26B');
+        numCell(ws, rowIdx,10,r.S||0,   'F9CB9C');
+        numCell(ws, rowIdx,11,r.Tip||0, 'FFF2CC');
+        numCell(ws, rowIdx,12,total,    '00FFFF');
+        sCom+=(r.com||0); sLvl+=(r.Level||0); sOT+=(r.OT||0); sR+=(r.R||0); sS+=(r.S||0); sTip+=(r.Tip||0);
+        rowIdx++;
+      }
+      const sTotal=sCom+sLvl+sOT+sR+sS+sTip;
+      textCell(ws,rowIdx,1,'','D6E4BC',true);
+      mergeRow(ws,rowIdx,2,5,'รวม '+co,'D6E4BC',true,'left');
+      numCell(ws,rowIdx,6,sCom,'D6E4BC'); numCell(ws,rowIdx,7,sLvl,'D6E4BC');
+      numCell(ws,rowIdx,8,sOT,'D6E4BC');  numCell(ws,rowIdx,9,sR,  'D6E4BC');
+      numCell(ws,rowIdx,10,sS,'D6E4BC');  numCell(ws,rowIdx,11,sTip,'D6E4BC');
+      numCell(ws,rowIdx,12,sTotal,'D6E4BC');
+      ws.getRow(rowIdx).height=16;
+      rowIdx++;
+    }
+
+    // Grand total
+    const valid=nickRecs.filter(r=>['Sinsub','Sukjai','Happines'].includes(r.company));
+    const gCom=valid.reduce((s,r)=>(r.com||0)+s,0);
+    const gLvl=valid.reduce((s,r)=>(r.Level||0)+s,0);
+    const gOT=valid.reduce((s,r)=>(r.OT||0)+s,0);
+    const gR=valid.reduce((s,r)=>(r.R||0)+s,0);
+    const gS=valid.reduce((s,r)=>(r.S||0)+s,0);
+    const gTip=valid.reduce((s,r)=>(r.Tip||0)+s,0);
+    const gTotal=gCom+gLvl+gOT+gR+gS+gTip;
+    textCell(ws,rowIdx,1,'','4472C4',true);
+    mergeRow(ws,rowIdx,2,5,'ยอดรวมทั้งหมด','4472C4',true,'left');
+    numCell(ws,rowIdx,6,gCom,'4472C4'); numCell(ws,rowIdx,7,gLvl,'4472C4');
+    numCell(ws,rowIdx,8,gOT,'4472C4');  numCell(ws,rowIdx,9,gR,  '4472C4');
+    numCell(ws,rowIdx,10,gS,'4472C4');  numCell(ws,rowIdx,11,gTip,'4472C4');
+    numCell(ws,rowIdx,12,gTotal,'4472C4');
+    for (let c=1;c<=12;c++) {
+      const cell=ws.getCell(rowIdx,c);
+      cell.font={ bold:true, name:'Calibri', size:11, color:{ argb:'FFFFFFFF' } };
+    }
+    ws.getRow(rowIdx).height=18;
+  }
+
+  // ── Build & Download ─────────────────────────────────────────────────────────
+  buildSummarySheet(masterRecords, 'รวมทุกสาขา');
+
+  for (const br of BRANCHES) {
+    const brRecs = masterRecords.filter(r=>(r[br]||0)+(r['OT_'+br]||0)+(r['R_'+br]||0)+(r['S_'+br]||0)>0);
+    if (!brRecs.length) continue;
+    buildBranchSheet(br, brRecs);
+  }
+
+  const today = new Date().toISOString().slice(0,10);
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`DIORA_Master_${today}.xlsx`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+  showStatus('success', `📥 Export Excel เสร็จแล้ว (${masterRecords.length} records)`);
+}
+
+
+
+// ─── showStatus / showProgress ──────────────────────────────────────────────
+function showStatus(type, msg) {
+  const box = document.getElementById('status-box');
+  if (!box) return;
+  box.style.display = '';
+  const colors = { success:'#f0faf5', error:'#fff5f5', info:'#ebf8ff' };
+  const border  = { success:'#68d391', error:'#fc8181', info:'#63b3ed' };
+  const textCol = { success:'#276749', error:'#c53030', info:'#2b6cb0' };
+  box.style.background = colors[type]  || '#f7fafc';
+  box.style.border     = `1px solid ${border[type]||'#e2e8f0'}`;
+  box.style.color      = textCol[type] || '#2d3748';
+  box.style.borderRadius = '10px';
+  box.style.padding    = '10px 14px';
+  box.style.fontSize   = '13px';
+  box.style.whiteSpace = 'pre-line';
+  box.style.marginBottom = '12px';
+  box.textContent = msg;
+}
+
+function showProgress(pct) {
+  const wrap = document.getElementById('progress-wrap');
+  const bar  = document.getElementById('progress-bar');
+  if (!wrap || !bar) return;
+  if (pct <= 0) { wrap.style.display = 'none'; bar.style.width = '0%'; return; }
+  wrap.style.display = '';
+  bar.style.width = Math.min(100, pct) + '%';
+}
+
+// ─── switchTab ───────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('tab-' + tab);
+  const btn  = document.getElementById('tab-btn-' + tab);
+  if (page) page.classList.add('active');
+  if (btn)  btn.classList.add('active');
+  if (tab === 'master') msInit();
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Drag-drop on Daily upload box
+  const box = document.getElementById('py-upload-box');
+  if (box) {
+    box.addEventListener('dragover', e => { e.preventDefault(); box.style.borderColor = '#2d6a4f'; });
+    box.addEventListener('dragleave', () => { box.style.borderColor = ''; });
+    box.addEventListener('drop', e => {
+      e.preventDefault(); box.style.borderColor = '';
+      handlePayrollFiles(e.dataTransfer.files);
+    });
+  }
+
+  // Drag-drop on Master upload box
+  const msBox = document.getElementById('ms-upload-box');
+  if (msBox) {
+    msBox.addEventListener('dragover', e => { e.preventDefault(); msBox.style.opacity = '0.7'; });
+    msBox.addEventListener('dragleave', () => { msBox.style.opacity = ''; });
+    msBox.addEventListener('drop', e => {
+      e.preventDefault(); msBox.style.opacity = '';
+      msHandleFiles(e.dataTransfer.files);
+    });
+  }
+
+  // Load master data
+  msLoadLocal();
+  msRefreshUI();
+
+  // Auto-collapse GitHub section if already configured
+  ghLoadSettings();
+  const { token, repo } = ghGetConfig();
+  if (token && repo) {
+    setTimeout(() => {
+      const wrap = document.getElementById('gh-form-wrap');
+      const btn  = document.getElementById('gh-collapse-btn');
+      if (wrap) wrap.style.display = 'none';
+      if (btn)  btn.textContent = '▼';
+    }, 50);
+  }
+});
+
+</script>
+</body>
+</html>
