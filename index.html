@@ -1,0 +1,3958 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIORA — Commission Summary Generator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+.topbar {
+  background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+  color: white; padding: 16px 32px;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.topbar .logo { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+.topbar .subtitle { font-size: 13px; opacity: 0.8; }
+
+/* Tab Nav */
+.tab-nav {
+  background: white; border-bottom: 2px solid #e2e8f0;
+  display: flex; padding: 0 32px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  position: sticky; top: 0; z-index: 100;
+}
+.tab-btn {
+  padding: 14px 22px; font-size: 14px; font-weight: 600;
+  color: #718096; border: none; background: none;
+  cursor: pointer; border-bottom: 3px solid transparent;
+  margin-bottom: -2px; transition: all 0.2s;
+}
+.tab-btn:hover { color: #2d6a4f; }
+.tab-btn.active { color: #2d6a4f; border-bottom-color: #2d6a4f; }
+.tab-page { display: none; }
+.tab-page.active { display: block; }
+
+.container { max-width: 1100px; margin: 28px auto; padding: 0 20px 60px; }
+
+/* Cards */
+.card {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 24px 28px; margin-bottom: 20px;
+}
+.card-title {
+  font-size: 15px; font-weight: 700; color: #2d6a4f;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+}
+.step-badge {
+  background: #2d6a4f; color: white;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+
+/* Upload box */
+.upload-box {
+  border: 2px dashed #cbd5e0; border-radius: 12px;
+  padding: 28px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: #f7fafc; max-width: 500px; margin: 0 auto;
+}
+.upload-box:hover, .upload-box.drag-over { border-color: #2d6a4f; background: #f0faf5; }
+.upload-box.has-files { border-style: solid; border-color: #2d6a4f; background: #f0faf5; }
+.upload-box input[type=file] { display: none; }
+.upload-icon { font-size: 36px; margin-bottom: 10px; }
+.upload-hint { font-size: 13px; color: #718096; }
+
+.file-list { list-style: none; margin-top: 10px; text-align: left; }
+.file-list li {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #2d6a4f;
+  padding: 4px 0; border-bottom: 1px solid #e2e8f0;
+}
+.file-list li:last-child { border-bottom: none; }
+.file-list li .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-list li .fsize { color: #a0aec0; font-size: 11px; white-space: nowrap; }
+.file-list li .fdel { color: #fc8181; cursor: pointer; font-size: 14px; padding: 0 4px; }
+.file-list li .fdel:hover { color: #e53e3e; }
+
+.date-badge {
+  display: inline-block; margin-top: 8px;
+  font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 20px; background: #e6f4ef; color: #276749;
+}
+.date-badge.warn { background: #fffbeb; color: #744210; }
+
+.add-more-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #2d6a4f; cursor: pointer;
+  margin-top: 8px; padding: 4px 0; border: none; background: none;
+}
+.add-more-btn:hover { text-decoration: underline; }
+
+/* Buttons */
+.btn-primary {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, #2d6a4f, #1b4332);
+  color: white; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(45,106,79,0.35); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-action {
+  padding: 9px 18px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.btn-green  { background: #2d6a4f; color: white; }
+.btn-green:hover  { background: #1b4332; }
+.btn-dark   { background: #2d3748; color: white; }
+.btn-dark:hover   { background: #1a202c; }
+.btn-red    { background: #c53030; color: white; }
+.btn-red:hover    { background: #9b2c2c; }
+.btn-gray   { background: #e2e8f0; color: #4a5568; }
+.btn-gray:hover   { background: #cbd5e0; }
+.btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Progress */
+.progress-wrap { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 12px; overflow: hidden; display: none; }
+.progress-bar  { height: 100%; background: #2d6a4f; border-radius: 3px; transition: width 0.3s; width: 0%; }
+
+/* Status */
+.status-box { border-radius: 10px; padding: 14px 18px; font-size: 13px; display: none; }
+.status-box.show { display: block; }
+.status-box.info    { background:#ebf8ff; border:1px solid #90cdf4; color:#2b6cb0; }
+.status-box.success { background:#f0fff4; border:1px solid #68d391; color:#276749; }
+.status-box.error   { background:#fff5f5; border:1px solid #fc8181; color:#c53030; }
+
+/* Daily Summary Table */
+/* ── Branch Summary Tables ── */
+.branch-section { margin-bottom: 24px; }
+.branch-section-title {
+  font-size: 13px; font-weight: 700; color: #fff;
+  padding: 6px 14px; border-radius: 6px 6px 0 0;
+  letter-spacing: 0.5px;
+}
+.branch-title-LS { background: #276749; }
+.branch-title-AS { background: #2b4c8c; }
+.branch-title-SK { background: #744210; }
+.branch-title-LP { background: #553c9a; }
+.branch-title-OS { background: #97266d; }
+table.branch-tbl {
+  width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap;
+}
+table.branch-tbl th {
+  padding: 6px 10px; text-align: center; background: #f7fafc; color: #2d3748;
+  border: 1px solid #e2e8f0; font-weight: 600;
+}
+table.branch-tbl th.th-left { text-align: left; }
+table.branch-tbl td { padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: middle; }
+table.branch-tbl tr:hover td { background: #f0fff4; }
+table.branch-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.branch-tbl .total-row td { background: #fffff0; font-weight: 700; border-top: 2px solid #d69e2e; }
+table.branch-tbl .grand-row td { background: #2d3748; color: #fff; font-weight: 700; }
+.daily-table-wrap { overflow-x: auto; margin-top: 4px; }
+table.daily-tbl {
+  width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap;
+}
+table.daily-tbl th {
+  background: #2d3748; color: white;
+  padding: 8px 10px; text-align: center; position: sticky; top: 0; z-index: 2;
+}
+table.daily-tbl th.th-left { text-align: left; }
+table.daily-tbl td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+table.daily-tbl tr:hover td { background: #f7fafc; }
+table.daily-tbl .num { text-align: right; }
+table.daily-tbl input.cell-edit {
+  width: 72px; border: 1.5px solid #90cdf4; border-radius: 4px;
+  padding: 3px 5px; font-size: 12px; text-align: right; background: #ebf8ff; outline: none;
+}
+table.daily-tbl input.cell-edit:focus { border-color: #2d6a4f; }
+table.daily-tbl input.cell-edit.name-edit { width: 120px; text-align: left; }
+table.daily-tbl .co-sinsub  td { border-left: 3px solid #2d6a4f; }
+table.daily-tbl .co-sukjai  td { border-left: 3px solid #3b5998; }
+table.daily-tbl .co-happines td { border-left: 3px solid #c0962c; }
+table.daily-tbl .co-unknown td { border-left: 3px solid #9b59b6; }
+.co-hdr-sinsub  { background: #2d6a4f !important; }
+.co-hdr-sukjai  { background: #3b5998 !important; }
+.co-hdr-happines { background: #c0962c !important; }
+.co-hdr-unknown  { background: #9b59b6 !important; }
+.total-row td { background: #1a3a2a !important; color: white !important; font-weight: 700; }
+.subtotal-row td { background: #e8f5ee !important; font-weight: 600; color: #1b4332; }
+
+/* Master Summary */
+.master-period-bar {
+  background: linear-gradient(135deg, #1b4332, #2d6a4f);
+  color: white; border-radius: 12px; padding: 16px 24px;
+  display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+  margin-bottom: 20px;
+}
+.pb-item { text-align: center; }
+.pb-label { font-size: 11px; opacity: 0.75; margin-bottom: 2px; }
+.pb-val { font-size: 19px; font-weight: 700; }
+.pb-sep { width: 1px; height: 36px; background: rgba(255,255,255,0.2); }
+
+/* GitHub form */
+
+/* GitHub Settings collapsible */
+.gh-collapse-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: #718096; padding: 2px 6px;
+  border-radius: 6px; transition: all 0.15s; margin-left: auto;
+}
+.gh-collapse-btn:hover { background: #e2e8f0; color: #2d6a4f; }
+.gh-form-wrap { transition: max-height 0.3s ease, opacity 0.3s ease; overflow: hidden; }
+.gh-form-wrap.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
+
+.gh-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.gh-form label { font-size: 12px; font-weight: 600; color: #4a5568; display: block; margin-bottom: 4px; }
+.gh-form input {
+  border: 1.5px solid #cbd5e0; border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; background: #f7fafc; outline: none; width: 100%;
+}
+.gh-form input:focus { border-color: #2d6a4f; }
+.gh-form .field { flex: 1; min-width: 150px; }
+.gh-form .field-lg { flex: 2; min-width: 200px; }
+.gh-status { font-size: 12px; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; }
+.gh-status.ok  { background: #f0faf5; color: #276749; }
+.gh-status.err { background: #fff5f5; color: #c53030; }
+.gh-status.info { background: #ebf8ff; color: #2b6cb0; }
+
+/* Upload for master */
+.master-upload-box {
+  border: 2px dashed #e2e8f0; border-radius: 12px;
+  padding: 22px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: #f7fafc;
+}
+.master-upload-box:hover, .master-upload-box.drag-over { border-color: #2d6a4f; background: #f0faf5; }
+.master-upload-box input { display: none; }
+
+/* Diff panel */
+.diff-panel {
+  background: #fffbeb; border: 1.5px solid #f6ad55;
+  border-radius: 10px; padding: 16px 20px; margin-top: 14px; display: none;
+}
+.diff-panel h4 { color: #744210; font-size: 14px; margin-bottom: 10px; }
+.diff-item {
+  font-size: 12px; padding: 4px 8px; border-radius: 5px;
+  margin-bottom: 4px;
+}
+.diff-item.add { background: #f0faf5; color: #276749; }
+.diff-item.dup { background: #fff5f5; color: #c53030; }
+
+/* New employee panel */
+.new-emp-panel {
+  background:#fff8f0; border:1px solid #f6ad55;
+  border-radius:10px; padding:16px; margin-bottom:20px; display:none;
+}
+.new-emp-panel h3 { color:#c05621; font-size:14px; margin-bottom:12px; }
+table.new-emp-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+table.new-emp-tbl th { background:#f6ad55; color:white; padding:6px 10px; text-align:left; }
+table.new-emp-tbl td { padding:6px 10px; border-bottom:1px solid #feebc8; }
+table.new-emp-tbl select, table.new-emp-tbl input { padding:4px 6px; border:1px solid #f6ad55; border-radius:5px; font-size:12px; width:100%; }
+
+/* Spinner */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: white; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* View toggle */
+.view-toggle { display: flex; gap: 6px; }
+.view-toggle button {
+  padding: 6px 14px; border: 1.5px solid #cbd5e0; border-radius: 20px;
+  background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: #718096;
+}
+.view-toggle button.active { background: #2d3748; color: white; border-color: #2d3748; }
+
+.search-box {
+  padding: 7px 12px; border: 1.5px solid #cbd5e0; border-radius: 8px;
+  font-size: 12px; width: 170px; outline: none;
+}
+.search-box:focus { border-color: #2d6a4f; }
+
+.missing-card { background: #fff5f5; border: 1.5px solid #fc8181; border-radius: 10px; padding: 16px 20px; }
+.missing-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.missing-item .item-name { flex: 1; min-width: 200px; font-size: 12px; color: #4a5568; background: #fff; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; }
+.missing-item input[type=number] { width: 90px; border: 1.5px solid #fc8181; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #c53030; font-weight: 700; outline: none; text-align: center; }
+.missing-item input[type=number]:focus { border-color: #2d6a4f; color: #1a202c; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 14px; }
+.empty-state p { color: #718096; font-size: 14px; }
+
+/* ── Multi-date preview ── */
+.multidate-panel { display:none; }
+.multidate-header {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; margin-bottom:16px;
+}
+.multidate-stat {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; color:#4a5568;
+  background:#f7fafc; border:1px solid #e2e8f0;
+  border-radius:8px; padding:6px 14px;
+}
+.multidate-stat strong { color:#2d6a4f; }
+.multidate-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px;
+  margin-bottom:18px;
+}
+.md-day-card {
+  background:#f7fafc; border:1px solid #e2e8f0; border-radius:10px;
+  padding:12px 14px; cursor:pointer; transition:all 0.15s;
+  position:relative;
+}
+.md-day-card:hover { border-color:#2d6a4f; background:#f0faf5; }
+.md-day-card.expanded { border-color:#2d6a4f; background:#f0faf5; }
+.md-day-card.dup-warn { border-color:#f6ad55; background:#fffbeb; }
+.md-day-date { font-size:13px; font-weight:700; color:#2d3748; margin-bottom:4px; }
+.md-day-meta { font-size:11px; color:#718096; }
+.md-day-badge {
+  position:absolute; top:8px; right:8px; font-size:10px; font-weight:700;
+  padding:2px 7px; border-radius:10px;
+}
+.md-day-badge.new  { background:#c6f6d5; color:#276749; }
+.md-day-badge.dup  { background:#feebc8; color:#744210; }
+.md-day-detail {
+  display:none; margin-top:10px; padding-top:10px;
+  border-top:1px solid #e2e8f0;
+  max-height:240px; overflow-y:auto;
+}
+.md-day-detail.open { display:block; }
+.md-emp-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; padding:3px 0; border-bottom:1px solid #f0f4f8;
+}
+.md-emp-row:last-child { border-bottom:none; }
+.md-emp-nick { font-weight:600; color:#2d6a4f; min-width:50px; }
+.md-emp-total { color:#2d3748; font-variant-numeric:tabular-nums; }
+
+/* ── Drag-and-drop row reorder ── */
+.otrs-wrap { position: relative; display: inline-flex; align-items: center; gap: 2px; }
+.otrs-badge {
+  font-size: 9px; background: #2d6a4f; color: #fff;
+  border-radius: 8px; padding: 0 4px; cursor: pointer;
+  line-height: 14px; min-width: 14px; text-align: center;
+  user-select: none; flex-shrink: 0;
+}
+.otrs-popup {
+  position: absolute; z-index: 9999;
+  background: #1a1a2e; color: #e2e8f0;
+  border: 1px solid #2d6a4f; border-radius: 8px;
+  padding: 8px 12px; font-size: 12px; min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.otrs-popup-title { font-weight: 700; color: #68d391; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.otrs-popup-row { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
+.otrs-popup-row span:last-child { font-weight: 600; color: #f6e05e; }
+.drag-handle {
+  cursor: grab; color: #cbd5e0; font-size: 16px;
+  padding: 0 6px; user-select: none; line-height: 1;
+}
+.drag-handle:active { cursor: grabbing; }
+tr.dragging { opacity: 0.4; background: #e6f4ef !important; }
+tr.drag-over-top td    { border-top: 2px solid #2d6a4f !important; }
+tr.drag-over-bottom td { border-bottom: 2px solid #2d6a4f !important; }
+
+/* ── Calendar / Date Status UI ── */
+.cal-card {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 20px 24px; margin-bottom: 20px;
+}
+.cal-title {
+  font-size: 14px; font-weight: 700; color: #2d3748;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.cal-grid {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.cal-day {
+  width: 38px; height: 38px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; cursor: default;
+  position: relative; transition: transform 0.15s;
+}
+.cal-day:hover { transform: scale(1.12); z-index: 1; }
+.cal-day.empty  { background: #f0f4f8; color: #cbd5e0; }
+.cal-day.has-data { background: #2d6a4f; color: white; box-shadow: 0 2px 6px rgba(45,106,79,0.35); }
+.cal-day.today  { ring: 2px solid #f6ad55; outline: 2px solid #f6ad55; }
+.cal-day.new-data { background: #f6ad55; color: #744210;
+  animation: pulse-new 1.5s ease-in-out 3; }
+@keyframes pulse-new {
+  0%,100% { transform: scale(1); box-shadow: 0 2px 6px rgba(246,173,85,0.4); }
+  50%      { transform: scale(1.18); box-shadow: 0 4px 14px rgba(246,173,85,0.7); }
+}
+.cal-day.clickable { cursor: pointer; }
+.cal-day.clickable:hover { transform: scale(1.15); filter: brightness(1.1); }
+.cal-day.selected { outline: 2.5px solid #1a202c; outline-offset: 1px; }
+
+/* Day Detail Panel */
+.day-detail-panel {
+  margin-top: 14px; border-top: 2px solid #e2e8f0;
+  padding-top: 16px; display: none;
+}
+.day-detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+}
+.day-detail-title {
+  font-size: 14px; font-weight: 700; color: #2d3748;
+}
+.day-detail-actions { display: flex; gap: 8px; }
+.ddp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ddp-table th {
+  background: #1b4332; color: white;
+  padding: 6px 8px; text-align: center; font-weight: 600;
+}
+.ddp-table th.th-left { text-align: left; }
+.ddp-table td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+.ddp-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ddp-table tr:hover td { background: #f0faf4; }
+.ddp-table tr.ddp-edit td { background: #fffbeb; }
+.ddp-table .cell-sm {
+  width: 60px; border: 1px solid #d1d5db; border-radius: 4px;
+  padding: 2px 4px; text-align: right; font-size: 11px;
+}
+.ddp-empty { text-align: center; color: #a0aec0; padding: 20px; font-size: 13px; }
+
+.cal-legend {
+  display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;
+}
+.cal-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #718096;
+}
+.cal-legend-dot {
+  width: 12px; height: 12px; border-radius: 3px;
+}
+.cal-month-label {
+  font-size: 11px; font-weight: 700; color: #718096;
+  width: 100%; margin-top: 6px; margin-bottom: 2px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* ── All-Time Total Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 1000; display: flex; align-items: flex-start; justify-content: center;
+  padding: 32px 16px; overflow-y: auto;
+}
+.modal-box {
+  background: white; border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  width: 100%; max-width: 900px;
+  padding: 28px 28px 24px;
+  position: relative;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 18px;
+  background: none; border: none; font-size: 20px; cursor: pointer; color: #718096;
+}
+.modal-close:hover { color: #1a202c; }
+.modal-title {
+  font-size: 16px; font-weight: 700; color: #2d6a4f;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.all-total-tbl { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.all-total-tbl th {
+  background: #1b4332; color: white;
+  padding: 7px 8px; text-align: center; position: sticky; top: 0; z-index: 2;
+}
+.all-total-tbl th.th-left { text-align: left; }
+.all-total-tbl td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+.all-total-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.all-total-tbl tr:hover td { background: #f0faf4; }
+.all-total-tbl .sub-row td { background: #e8f5ee !important; font-weight: 700; color: #1b4332; }
+.all-total-tbl .grand-row td { background: #1a3a2a !important; color: white !important; font-weight: 700; }
+
+/* ── Sync dot pulse ── */
+@keyframes pulse-sync {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(1.4); }
+}
+
+/* ── Branch Detail Tables (Day Detail Panel) ── */
+.bdt-section { margin-bottom: 18px; }
+.bdt-title {
+  font-size: 12px; font-weight: 700; color: #fff;
+  padding: 5px 12px; border-radius: 6px 6px 0 0;
+  letter-spacing: 0.4px;
+}
+.bdt-title-LS { background: #276749; }
+.bdt-title-AS { background: #2b4c8c; }
+.bdt-title-SK { background: #744210; }
+.bdt-title-LP { background: #553c9a; }
+.bdt-title-OS { background: #97266d; }
+table.bdt-tbl {
+  width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap;
+}
+table.bdt-tbl th {
+  padding: 5px 8px; text-align: center; background: #f7fafc;
+  color: #2d3748; border: 1px solid #e2e8f0; font-weight: 600;
+}
+table.bdt-tbl th.th-left { text-align: left; }
+table.bdt-tbl td { padding: 4px 8px; border: 1px solid #e2e8f0; vertical-align: middle; }
+table.bdt-tbl tr:nth-child(even) td { background: #f7fafc; }
+table.bdt-tbl tr:hover td { background: #f0fff4; }
+table.bdt-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.bdt-tbl .sub-row td { background: #e8f5ee !important; font-weight: 700; color: #1b4332; border-top: 2px solid #276749; }
+table.bdt-tbl .grand-row td { background: #fefcbf !important; font-weight: 700; color: #1a202c; border-top: 2px solid #b7791f; font-size: 12px; }
+.bdt-toggle-btn {
+  font-size: 11px; color: #718096; background: none; border: none;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+}
+.bdt-toggle-btn:hover { background: #e2e8f0; color: #2d6a4f; }
+.bdt-wrap { display: none; }
+.bdt-wrap.open { display: block; }
+
+/* ── Search box in DDP ── */
+.ddp-search-wrap {
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.ddp-search {
+  flex: 1; max-width: 220px;
+  padding: 6px 12px; border: 1.5px solid #cbd5e0; border-radius: 8px;
+  font-size: 13px; outline: none;
+}
+.ddp-search:focus { border-color: #2d6a4f; }
+.ddp-search-count { font-size: 11px; color: #a0aec0; }
+
+
+/* ── Sidebar layout ── */
+.app-shell { display:flex; min-height:100vh; }
+.sidebar {
+  width:210px; flex-shrink:0; background:linear-gradient(180deg,#1b4332,#2d6a4f);
+  color:#fff; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+  box-shadow:2px 0 10px rgba(0,0,0,0.12); z-index:200;
+}
+.sidebar-logo { padding:20px 22px 16px; border-bottom:1px solid rgba(255,255,255,0.12); }
+.sidebar-logo .logo { font-size:22px; font-weight:700; letter-spacing:2px; }
+.sidebar-logo .subtitle { font-size:11px; opacity:0.75; margin-top:2px; }
+.side-nav { display:flex; flex-direction:column; padding:12px 10px; gap:4px; }
+.side-nav-btn {
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:11px 14px; border:none; background:none; color:rgba(255,255,255,0.85);
+  font-size:14px; font-weight:600; cursor:pointer; border-radius:8px; text-align:left;
+  transition:all 0.15s;
+}
+.side-nav-btn span { flex:1; }
+.side-nav-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+.side-nav-btn.active { background:rgba(255,255,255,0.2); color:#fff; box-shadow:inset 3px 0 0 #f6ad55; }
+.main-area { flex:1; min-width:0; background:#f0f4f8; }
+@media (max-width:720px){
+  .app-shell{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;align-items:center;}
+  .sidebar-logo{border-bottom:none;border-right:1px solid rgba(255,255,255,0.12);}
+  .side-nav{flex-direction:row;flex:1;overflow-x:auto;}
+}
+/* ── Employees roster table ── */
+.emp-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.emp-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.emp-tbl th { background:#1b4332; color:#fff; padding:8px 10px; text-align:left; position:sticky; top:0; z-index:2; }
+.emp-tbl th.num, .emp-tbl td.num { text-align:right; font-variant-numeric:tabular-nums; }
+.emp-tbl td { padding:6px 10px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
+.emp-tbl tr:hover td { background:#f0faf4; }
+.emp-tbl tr.editing td { background:#fffbeb; }
+.emp-tbl input, .emp-tbl select { padding:5px 7px; border:1.5px solid #cbd5e0; border-radius:6px; font-size:12px; width:100%; box-sizing:border-box; }
+.emp-tbl input:focus, .emp-tbl select:focus { border-color:#2d6a4f; outline:none; }
+.emp-badge-os { font-size:10px; background:#97266d; color:#fff; padding:1px 7px; border-radius:10px; }
+.emp-co-sinsub{color:#2d6a4f;font-weight:600}.emp-co-sukjai{color:#3b5998;font-weight:600}.emp-co-happines{color:#c0962c;font-weight:600}.emp-co-unknown{color:#9b59b6;font-weight:600}
+.emp-act-btn { font-size:12px; padding:4px 9px; border:none; border-radius:6px; cursor:pointer; font-weight:600; margin-right:4px; }
+
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo">DIORA SPA</div>
+      <div class="subtitle">Commission Generator</div>
+    </div>
+    <nav class="side-nav">
+      <button class="side-nav-btn active" id="tab-btn-master"    onclick="switchTab('master')">📊 <span>Master Summary</span></button>
+      <button class="side-nav-btn"        id="tab-btn-employees" onclick="switchTab('employees')">👥 <span>Employees</span></button>
+      <button class="side-nav-btn"        id="tab-btn-settings"  onclick="switchTab('settings')">⚙️ <span>Settings</span></button>
+    </nav>
+  </aside>
+  <main class="main-area">
+
+
+
+
+
+
+<!-- ════════════════════════════════════════
+     MASTER TAB
+════════════════════════════════════════ -->
+<div class="tab-page active" id="tab-master">
+<div class="container">
+
+  <!-- (GitHub settings moved to Settings tab) -->
+
+  <!-- Upload Payroll into Master -->
+  <div class="card">
+    <div class="card-title">➕ เพิ่มข้อมูลจาก Payroll ใหม่</div>
+    <div class="master-upload-box" id="ms-upload-box" onclick="document.getElementById('ms-file-input').click()">
+      <input type="file" id="ms-file-input" accept=".xlsx,.xls" multiple onchange="msHandleFiles(this.files)">
+      <div style="font-size:28px;margin-bottom:8px">📂</div>
+      <div style="font-size:13px;color:#718096">คลิกหรือลาก Payroll File มาวาง — ระบบจะแสดง Preview ก่อน Confirm</div>
+    </div>
+    <div class="diff-panel" id="ms-diff-panel"></div>
+
+  </div>
+
+
+  <!-- Compute from uploaded payroll (Daily workflow inside Master) -->
+  <div class="card" id="ms-gen-card" style="display:none">
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <div class="status-box" id="status-box" style="display:none;margin:0 0 16px"></div>
+
+  <!-- New Employee Panel -->
+  
+
+  <!-- Missing COM_MAP -->
+  
+
+  <!-- Single-date Preview & Edit -->
+  <!-- Branch-by-branch summary panel (shown before Daily Summary) -->
+  
+
+  
+
+  <!-- Multi-date preview panel -->
+  
+
+  <!-- Period bar -->
+  <div id="ms-period-bar" style="display:none" class="master-period-bar">
+    <div class="pb-item"><div class="pb-label">รอบบัญชี</div><div class="pb-val" id="ms-pb-period">—</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">วันที่มีข้อมูล</div><div class="pb-val" id="ms-pb-days">0 วัน</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">Commission รวม</div><div class="pb-val" id="ms-pb-com">฿0</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">OT/R/S รวม</div><div class="pb-val" id="ms-pb-extra">฿0</div></div>
+    <div class="pb-sep"></div>
+    <div class="pb-item"><div class="pb-label">พนักงาน</div><div class="pb-val" id="ms-pb-emp">0</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-action btn-gray" onclick="openAllTotalModal()">📊 ยอดรวม</button>
+      <button class="btn-action btn-dark" onclick="msRefreshFromRoster()" title="อัปเดต Company/Level/OS ของข้อมูลที่นำเข้าแล้ว ให้ตรงกับฐานข้อมูลพนักงาน">↻ Sync พนักงาน</button>
+      <button class="btn-action btn-green" onclick="masterExportExcel()">📥 Export Excel</button>
+      <button class="btn-action" onclick="msClearAll()" style="background:#fed7d7;color:#c53030;border:none">🗑 ล้างข้อมูลทั้งหมด</button>
+    </div>
+  </div>
+
+  <!-- Calendar: Date Status -->
+  <div class="cal-card" id="ms-cal-card" style="display:none">
+    <div class="cal-title">📅 สถานะข้อมูลรายวัน — รอบบัญชีปัจจุบัน</div>
+    <div class="cal-grid" id="ms-cal-grid"></div>
+    <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#2d6a4f"></div>มีข้อมูลแล้ว</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f6ad55"></div>อัปเดตล่าสุด</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f0f4f8;border:1px solid #e2e8f0"></div>ยังไม่มีข้อมูล</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:white;outline:2px solid #f6ad55"></div>วันนี้</div>
+    </div>
+
+    <!-- Day Detail Panel (shown when clicking a date) -->
+    <div class="day-detail-panel" id="day-detail-panel">
+      <div class="day-detail-header">
+        <div class="day-detail-title" id="ddp-title">📋 —</div>
+        <div class="day-detail-actions">
+          <!-- ยอดรวม moved to period bar -->
+          <button class="btn-action btn-gray" id="ddp-btn-edit"   onclick="ddpToggleEdit()"   style="display:none" hidden>✏️ แก้ไข</button>
+          <button class="btn-action btn-green" id="ddp-btn-save"  onclick="ddpSave()"         style="display:none">💾 บันทึก</button>
+          <button class="btn-action btn-gray"  id="ddp-btn-cancel" onclick="ddpCancelEdit()"  style="display:none">✕ ยกเลิก</button>
+          <button class="btn-action" id="ddp-btn-delday" onclick="ddpDeleteDay()"
+            style="background:#fed7d7;color:#c53030;border:none;display:none">🗑 ลบทั้งวัน</button>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#a0aec0;margin-bottom:8px" id="ddp-hint" style="display:none">
+        ✏️ แก้ไขตัวเลขได้ในตาราง · ⠿ ลากแถวเพื่อเรียงลำดับ · 🗑 ลบรายคน
+      </p>
+      <div id="ddp-body"></div>
+    </div>
+  </div>
+
+  <!-- Empty -->
+  <div id="ms-empty" class="card">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <p>ยังไม่มีข้อมูล Master Summary<br>อัปโหลด Payroll File ด้านบน แล้วกด Confirm เพื่อบันทึก</p>
+    </div>
+  </div>
+
+</div>
+</div><!-- end tab-master -->
+
+<!-- ════════════════════════════════════════
+     EMPLOYEES TAB
+════════════════════════════════════════ -->
+<div class="tab-page" id="tab-employees">
+<div class="container">
+  <div class="card">
+    <div class="card-title">👥 จัดการพนักงาน (Employee Roster)</div>
+    <div class="emp-toolbar">
+      <button class="btn-action btn-green" onclick="empAddRow()">➕ เพิ่มพนักงาน</button>
+      <input class="search-box" id="emp-search" placeholder="🔍 ค้นหา nick / ชื่อ / ID" oninput="empRender()">
+      <span style="font-size:12px;color:#718096" id="emp-count"></span>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-action btn-green" id="emp-pull-btn" onclick="rosterGhFetch()">⬇️ Pull roster</button>
+        <button class="btn-action btn-dark" onclick="rosterGhPush()">☁️ Push roster</button>
+        <button class="btn-action btn-gray" onclick="empResetDefaults()">↺ ค่าเริ่มต้น</button>
+      </div>
+    </div>
+    <div id="emp-roster-sync" style="font-size:11px;color:#718096;margin-bottom:10px"></div>
+    <div style="overflow-x:auto">
+      <table class="emp-tbl" id="emp-tbl"></table>
+    </div>
+    <p style="font-size:11px;color:#a0aec0;margin-top:10px">
+      💡 ID = รหัสสแกนนิ้ว · OS = พนักงานเงินเดือน (commission = 0) · Aliases = ชื่อใน Payroll ที่สะกดต่างกัน (คั่นด้วย ,)
+    </p>
+  </div>
+</div>
+</div><!-- end tab-employees -->
+
+<!-- ════════════════════════════════════════
+     SETTINGS TAB
+════════════════════════════════════════ -->
+<div class="tab-page" id="tab-settings">
+<div class="container">
+  <!-- GitHub Settings -->
+  <div class="card">
+    <div class="card-title" style="cursor:pointer;user-select:none" onclick="ghToggleCollapse()">
+      🔗 เชื่อมต่อ GitHub (optional)
+      <button class="gh-collapse-btn" id="gh-collapse-btn" title="ซ่อน/แสดง">▲</button>
+    </div>
+    <div class="gh-form-wrap" id="gh-form-wrap" style="max-height:400px;opacity:1">
+    <div class="gh-form">
+      <div class="field">
+        <label>Personal Access Token</label>
+        <input type="password" id="gh-token" placeholder="github_pat_xxxx" autocomplete="off">
+      </div>
+      <div class="field-lg">
+        <label>Repository (owner/repo)</label>
+        <input type="text" id="gh-repo" placeholder="your-org/diora-data">
+      </div>
+      <div class="field">
+        <label>Branch</label>
+        <input type="text" id="gh-branch" value="main">
+      </div>
+      <div class="field">
+        <label>File Path</label>
+        <input type="text" id="gh-path" value="data/master_summary.json">
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <button class="btn-action btn-dark" onclick="ghSaveSettings()">💾 บันทึก</button>
+        <button class="btn-action btn-green" onclick="ghFetch()">⬇️ ดึงข้อมูล</button>
+      </div>
+    </div>
+    <div style="margin-top:10px" id="gh-status-wrap"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px">
+      <p style="font-size:11px;color:#a0aec0;margin:0">⚠️ Token เก็บเฉพาะใน localStorage ของเครื่องนี้</p>
+      <div id="gh-sync-badge" style="font-size:11px;color:#718096;display:flex;align-items:center;gap:5px">
+        <span id="gh-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#cbd5e0;display:inline-block"></span>
+        <span id="gh-sync-label">ยังไม่ได้ sync</span>
+      </div>
+    </div>
+    </div><!-- end gh-form-wrap -->
+  </div>
+
+  <!-- Backup / Restore card -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">💾 สำรองและกู้คืนข้อมูล</div>
+    <p style="font-size:12px;color:#718096;margin:0 0 12px">
+      Export ก่อนอัพเดทโปรแกรม — Import เพื่อกู้คืนข้อมูลทั้งหมด (masterRecords + roster)
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn-action btn-green" onclick="backupExport()">📤 Export Backup (.json)</button>
+      <label class="btn-action btn-dark" style="cursor:pointer;margin:0">
+        📥 Import Backup
+        <input type="file" accept=".json" style="display:none" onchange="backupImport(event)">
+      </label>
+    </div>
+    <div id="backup-status" style="margin-top:10px;font-size:12px;display:none"></div>
+  </div>
+
+</div>
+</div><!-- end tab-settings -->
+
+  </main>
+</div><!-- end app-shell -->
+
+<!-- All-Time Total Modal -->
+<div id="all-total-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeAllTotalModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAllTotalModal()">✕</button>
+    <div class="modal-title">📊 ยอดรวมทั้งหมด — ทุกวัน</div>
+    <div id="all-total-period" style="font-size:12px;color:#718096;margin-bottom:14px"></div>
+    <div style="overflow-x:auto">
+      <table class="all-total-tbl" id="all-total-tbl"></table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA: NICK_INFO, COM_MAP, OS_LEVEL, PAYROLL_NICK_MAP
+// ═══════════════════════════════════════════════════════
+
+const _DEF_NICK_INFO = {
+  'Ae':{company:'Sinsub',level:'Silver'},
+  'App':{company:'Sinsub',level:'Basic'},
+  'Aris':{company:'Sinsub',level:'Silver'},
+  'BB':{company:'Sinsub',level:'OS'},
+  'BEW':{company:'Sukjai',level:'Silver'},
+  'Bam':{company:'Happines',level:'Silver'},
+  'Big':{company:'Sukjai',level:'OS'},
+  'Bua':{company:'Sinsub',level:'OS'},
+  'Cat':{company:'Sukjai',level:'OS'},
+  'Cha.':{company:'Sinsub',level:'Basic'},
+  'Chat':{company:'Sinsub',level:'Silver'},
+  'Cream':{company:'Sinsub',level:'Basic'},
+  'DA':{company:'Sinsub',level:'Silver'},
+  'Dee':{company:'Sinsub',level:'Silver'},
+  'Downy':{company:'Sinsub',level:'Basic'},
+  'Earn':{company:'Sukjai',level:'Basic'},
+  'Fern':{company:'Happines',level:'Basic'},
+  'Frame':{company:'Sinsub',level:'Silver'},
+  'JO':{company:'Sinsub',level:'Basic'},
+  'Jai':{company:'Sinsub',level:'Trainer'},
+  'Jang':{company:'Sinsub',level:'Basic'},
+  'Jar':{company:'Sinsub',level:'Silver'},
+  'Jasmine':{company:'Happines',level:'Silver'},
+  'Jeab':{company:'Sinsub',level:'Basic'},
+  'Jin':{company:'Sinsub',level:'Basic'},
+  'Jit':{company:'Sinsub',level:'Silver'},
+  'June':{company:'Sinsub',level:'Silver'},
+  'Kate':{company:'Sinsub',level:'Basic'},
+  'Koi':{company:'Sukjai',level:'Basic'},
+  'Korn':{company:'Sinsub',level:'Basic'},
+  'Kung':{company:'Sinsub',level:'Basic'},
+  'Lee':{company:'Sinsub',level:'Basic'},
+  'Lek':{company:'Sinsub',level:'Silver'},
+  'M':{company:'Sinsub',level:'Basic'},
+  'Mai':{company:'Sinsub',level:'Basic'},
+  'Mam':{company:'Sukjai',level:'Basic'},
+  'Manow':{company:'Sinsub',level:'Basic'},
+  'Meena':{company:'Sukjai',level:'Basic'},
+  'Mimi':{company:'Sukjai',level:'Basic'},
+  'Mint':{company:'Sukjai',level:'Basic'},
+  'Mook':{company:'Sukjai',level:'Basic'},
+  'Nai':{company:'Sinsub',level:'Silver'},
+  'Nattarika':{company:'?',level:'Basic'},
+  'Nang':{company:'Sinsub',level:'OS'},
+  'Nat':{company:'Sinsub',level:'Gold'},
+  'New':{company:'Sinsub',level:'Basic'},
+  'Nid':{company:'Sinsub',level:'Basic'},
+  'Ning':{company:'Sinsub',level:'Basic'},
+  'Nong':{company:'Sinsub',level:'Basic'},
+  'Noy':{company:'Sukjai',level:'Basic'},
+  'Oil':{company:'Sukjai',level:'Basic'},
+  'Olay':{company:'Sinsub',level:'Silver'},
+  'Ouan':{company:'Sinsub',level:'Silver'},
+  'PLERN':{company:'Sinsub',level:'Silver'},
+  'Pat':{company:'Sinsub',level:'Silver'},
+  'Paula':{company:'Sukjai',level:'Basic'},
+  'Pla':{company:'Sinsub',level:'Silver'},
+  'Por':{company:'Sukjai',level:'Basic'},
+  'Praew':{company:'Sinsub',level:'Basic'},
+  'Pu':{company:'Happines',level:'Trainer'},
+  'RAT':{company:'Sinsub',level:'Silver'},
+  'SU':{company:'Happines',level:'Basic'},
+  'Sa':{company:'Sinsub',level:'Silver'},
+  'Sai':{company:'Sukjai',level:'Basic'},
+  'So':{company:'Sinsub',level:'Basic'},
+  'Sorn':{company:'Sinsub',level:'Basic'},
+  'Sri':{company:'Sukjai',level:'Basic'},
+  'Taew':{company:'Sukjai',level:'Basic'},
+  'Tian':{company:'?',level:'Basic'},
+  'Tan':{company:'Sukjai',level:'Silver'},
+  'Tik':{company:'Sinsub',level:'Basic'},
+  'Tim':{company:'Sukjai',level:'Gold'},
+  'Wan':{company:'Sinsub',level:'Basic'},
+  'Wi':{company:'Sinsub',level:'Basic'},
+  'YUI':{company:'Sinsub',level:'OS'},
+  'Yard':{company:'Sukjai',level:'Gold'},
+  'Yaya':{company:'Sukjai',level:'Basic'},
+  'Ying':{company:'Sukjai',level:'Trainer'},
+  'Yo':{company:'Sinsub',level:'Silver'}
+};
+
+const _DEF_OS_LEVEL = new Set(['BB','Big','Bua','Cat','Nang','YUI']);
+
+// Scanner employee ID per nick (from รายชื่อพนักงานและบริษัท.xlsx). Used to sort
+// the Excel export ascending by employee ID. Nicks not present here (e.g. the two
+// unknown-company staff) sort last.
+const _DEF_EMP_ID = {
+  'Ae':2063,'App':2117,'Aris':2245,'BB':2233,'BEW':2040,'Bam':2151,'Big':2153,
+  'Bua':2223,'Cat':2131,'Cha.':2020,'Chat':2009,'Cream':2269,'DA':2265,'Dee':2181,
+  'Downy':2273,'Earn':2174,'Fern':2279,'Frame':2263,'JO':2236,'Jai':2175,'Jang':2007,
+  'Jar':2259,'Jasmine':2272,'Jeab':2137,'Jin':2032,'Jit':2002,'June':2253,'Kate':2003,
+  'Koi':2213,'Korn':2186,'Kung':2130,'Lee':2126,'Lek':2062,'M':2004,'Mai':2018,
+  'Mam':2170,'Manow':2276,'Meena':2105,'Mimi':2240,'Mint':2097,'Mook':2050,'Nai':2067,
+  'Nang':2231,'Nat':2182,'New':2162,'Nid':2201,'Ning':2264,'Nong':2200,'Noy':2106,
+  'Oil':2112,'Olay':2262,'Ouan':2083,'PLERN':2241,'Pat':2254,'Paula':2055,'Pla':2080,
+  'Por':2111,'Praew':2043,'Pu':2001,'RAT':2267,'SU':2280,'Sa':2014,'Sai':2041,'So':2261,
+  'Sorn':2275,'Sri':2047,'Taew':2191,'Tan':2173,'Tik':2257,'Tim':2183,'Wan':2119,
+  'Wi':2079,'YUI':2234,'Yard':2154,'Yaya':2016,'Ying':2180,'Yo':2268
+};
+function empIdStr(nick){ return EMP_ID[nick]!=null ? String(EMP_ID[nick]) : ''; }
+function empIdSortKey(nick){ return EMP_ID[nick]!=null ? EMP_ID[nick] : Infinity; }
+
+const _DEF_PAYROLL_NICK_MAP = {
+  'Bew':'BEW', 'Cha':'Cha.', 'Jo':'JO', 'Pleon':'PLERN',
+  'Rat':'RAT', 'Su':'SU', 'Wan':'Wan', 'TikJiraphan':'Tik',
+  'Nut':'Nat',
+  'Nattarika':'Nattarika'
+};
+
+// ═══════════════════════════════════════════════════════
+//  RUNTIME EMPLOYEE ROSTER (editable, persisted)
+//  The four _DEF_* maps above are seed defaults. At runtime the live lookups
+//  (NICK_INFO / OS_LEVEL / EMP_ID / PAYROLL_NICK_MAP) are rebuilt from `roster`,
+//  which is loaded from localStorage (key diora_roster_v1) or seeded from defaults.
+//  Edited in the Employees tab; synced to GitHub as roster.json.
+// ═══════════════════════════════════════════════════════
+let NICK_INFO = {}, OS_LEVEL = new Set(), EMP_ID = {}, PAYROLL_NICK_MAP = {}, EMP_SPECIAL = {};
+let roster = [];
+const ROSTER_LS_KEY = 'diora_roster_v1';
+const ROSTER_TRUTH_VERSION = 'may-2026';
+const ROSTER_TRUTH_LS_KEY = 'diora_roster_truth_version';
+
+// Build the default roster array by merging the four seed maps.
+function buildDefaultRoster() {
+  const nicks = new Set([...Object.keys(_DEF_NICK_INFO), ...Object.keys(_DEF_EMP_ID)]);
+  const arr = [];
+  for (const nick of nicks) {
+    const info = _DEF_NICK_INFO[nick] || {};
+    arr.push({
+      nick,
+      id: (_DEF_EMP_ID[nick] != null ? _DEF_EMP_ID[nick] : null),
+      name: '',
+      company: info.company || '?',
+      level: info.level || 'Basic',
+      isOs: _DEF_OS_LEVEL.has(nick),
+      special: 'None',
+      aliases: []
+    });
+  }
+  // Attach payroll-name aliases to their target nick (skip identity entries)
+  for (const [alias, target] of Object.entries(_DEF_PAYROLL_NICK_MAP)) {
+    if (alias === target) continue;
+    const e = arr.find(x => x.nick === target);
+    if (e) e.aliases.push(alias);
+  }
+  arr.sort((a,b) => (a.id!=null?a.id:Infinity) - (b.id!=null?b.id:Infinity));
+  return arr;
+}
+
+// Regenerate the live lookup structures from `roster`. Call after every edit.
+function rebuildLookups() {
+  NICK_INFO = {}; OS_LEVEL = new Set(); EMP_ID = {}; PAYROLL_NICK_MAP = {}; EMP_SPECIAL = {};
+  for (const e of roster) {
+    if (!e || !e.nick) continue;
+    NICK_INFO[e.nick] = { company: e.company || '?', level: e.level || 'Basic' };
+    if (e.isOs) OS_LEVEL.add(e.nick);
+    if (e.id != null && e.id !== '') EMP_ID[e.nick] = Number(e.id);
+    for (const a of (e.aliases || [])) { if (a) PAYROLL_NICK_MAP[a] = e.nick; }
+    EMP_SPECIAL[e.nick] = e.special || 'None';
+  }
+}
+
+function rosterLoadLocal() {
+  try {
+    const raw = localStorage.getItem(ROSTER_LS_KEY);
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) { roster = arr; return; } }
+  } catch(e) {}
+  roster = buildDefaultRoster();
+}
+function rosterSaveLocal() {
+  try { localStorage.setItem(ROSTER_LS_KEY, JSON.stringify(roster)); } catch(e) {}
+}
+function rosterApplyTruthOnce() {
+  try {
+    if (localStorage.getItem(ROSTER_TRUTH_LS_KEY) === ROSTER_TRUTH_VERSION) return;
+  } catch(e) {}
+  let changed = false;
+  const byNick = {};
+  for (const e of roster) { if (e && e.nick) byNick[e.nick] = e; }
+  for (const [nick, info] of Object.entries(_DEF_NICK_INFO)) {
+    let e = byNick[nick];
+    if (!e) {
+      e = { nick, id: (_DEF_EMP_ID[nick] != null ? _DEF_EMP_ID[nick] : null), name: '', special: 'None', aliases: [] };
+      roster.push(e);
+      changed = true;
+    }
+    if (e.company !== (info.company || '?')) { e.company = info.company || '?'; changed = true; }
+    if (e.level !== (info.level || 'Basic')) { e.level = info.level || 'Basic'; changed = true; }
+    const isOs = _DEF_OS_LEVEL.has(nick);
+    if (e.isOs !== isOs) { e.isOs = isOs; changed = true; }
+  }
+  if (changed) rosterSaveLocal();
+  try { localStorage.setItem(ROSTER_TRUTH_LS_KEY, ROSTER_TRUTH_VERSION); } catch(e) {}
+}
+// Load + activate the roster. Safe to call multiple times.
+function rosterInit() {
+  rosterLoadLocal();
+  // migrate older saved rosters: ensure newer fields exist
+  for (const e of roster) { if (e.special === undefined) e.special = 'None'; if (!Array.isArray(e.aliases)) e.aliases = []; }
+  rosterApplyTruthOnce();
+  rebuildLookups();
+}
+// Current special status for a nick ('None' | '90 Days'). Usable by payroll/commission logic.
+function empSpecialStatus(nick) { return EMP_SPECIAL[nick] || 'None'; }
+function isProbation90(nick) { return empSpecialStatus(nick) === '90 Days'; }
+
+const COM_MAP = {
+  'Complimentary Food&Drink':0,
+  'Request (50Thb)':50,'Support (50Thb)':50,'Over Time (50 Bath)':50,
+  'Add On - Seasonal Milk Bath (30)(Couple)':50,
+  'Add On - Herbal Compress (30)':90,'Add On - Hand and Arm (30)':90,
+  'Add On - Body Scrub (30) + Shower (15)':90,'Add On - Foot Massage (30)':90,
+  'Add On - Neck & Shoulder Massage (30)':90,'Add On - Hot Stone (Neck, Back & Shoulder)(30)':90,
+  'Add On - Head Massage (30)':90,'Add On - Back Massage (30)':90,
+  'OS-Detax Facial Mask (30-min)':90,'OS-Lomi Lomi Massage (30-min)':90,
+  'OS-Fresh Herbal Compress (30-min)':90,'OS-Seitai Dry Massage (30-min)':90,
+  'OS-Spiritual Well-being (Sound Healing) 30-min':90,
+  'OS-Hot Stone Massage (30-min)':100,'OS Private Onsen (30 mins)':50,
+  'OS-GoWabi-Private Onsen Retreat Single (60 mins)':100,'OS-GoWabi-Private Onsen Retreat Couple (60 mins)':100,
+  'OS-Private Onsen Retreat Couple- 60 min':100,'OS-Private Onsen Retreat Single - 60 min':100,'OS-Private Onsen Retreat Single - 90 min':150,'OS-GoWabi-Private Onsen Retreat Single (90 mins)':150,
+  'OS-GoWabi-Private Onsen Retreat Couple (90 mins)':150,'OS-Klook-Private Onsen Retreat Couple (90 mins)':150,
+  'OS-Private Onsen Retreat Couple- 90 min':150,
+  'Luxe-Warm Oil Head Massage(60)':180,'Luxe-Warm Oil Head Massage (60)':180,'Kids Spa-DEC24-Gentle Foot Care (60)':180,
+  'Kids Spa-DEC24-Little Relaxation (90)':270,'ClassPass-SEP25-WARM OIL HEAD MASSAGE (60)':180,
+  'Member-Kids Spa-Gentle Foot Care (60)':150,'Luxe-100% Pure Oil Massage (60)':180,
+  'Luxe-Organic Aromatherapy Oil Massage (60)':180,'Luxe-Four Hands 100% Pure Oil Massage(60)':180,
+  'Luxe-Four Hands Massage with Organic Aromatherapy(60)':180,'Luxe-DIORA Signature Body Scrub(60)':180,
+  'Luxe - Body Lotion Massage (60)':180,'Luxe- Anti Aging Facial (Gold collagen mask)':180,
+  'Mar2025-Luxe Thai Massage (60)':180,'Mar2025-Luxe Foot Massage (60)':180,
+  'OS-A Day Onsen Retreat 2 (60-min)':180,'OS-A Day Onsen Retreat 3 (60-min)':180,
+  'OS-Authentic Thai Massage (60-min)':180,'OS-Signature Body Scrub (45-min)':90,
+  'OS-Signature Foot Massage (60-min)':180,'OS-Signature Kung Fu Fusion Oil Massage (60-min)':180,
+  'OS-Signature Kung Fu Fusion Dry Massage (60-min)':180,'OS-Signature Lomi Lomi Massage (60-min)':180,
+  'OS-Signature Shiatsu Fusion Massage (60-min)':180,'OS-Signature Seitai Fusion Massage (60-min)':180,
+  'Office Relief - Neck, Shoulder & Back Massage(60)':180,
+  'Klook-JUL24-AROMA OIL MASSAGE (60)':180,'GoWabi-JUL24-Organic Aromatherapy Oil Massage (60)':180,
+  'KKDay-AROMATHERAPY OIL MASSAGE (60)':180,'KKDay-WARM OIL HEAD MASSAGE(60)':180,
+  'KLOOK-Traditional Thai Massage (60)':180,'ClassPass-SEP25-AROMATHERAPY OIL MASSAGE (60)':180,
+  'ClassPass-SEP25-DIORA SIGNATURE BODY SCRUB (60)':180,'GoWabi-JUL24-DIORA Signature Body Scrub (60)':180,
+  'Klook-JUL24-DIORA SIGNATURE BODY SCRUB (60)':180,'AROMA 60-MASALA WEDDING FAIR A-LaCart 2025':180,
+  'GoWabi-MAR-APR26-Luxe-Aromatherapy Oil Massage(60)':180,'ThaiHand-JUL24-DIORA SIGNATURE BODY SCRUB (60)':180,
+  'OS-Signature Japanese Hot Stone Massage (60-min)':200,'OS-PROMOTION Private Onsen 30 + MASSAGE 60 (90-min)':230,
+  'Luxe-Warm Oil Head Massage(90)':270,'Luxe-100% Pure Oil Massage (90)':270,
+  'Luxe-Organic Aromatherapy Oil Massage (90)':270,'Luxe-Four Hands 100% Pure Oil Massage(90)':270,
+  'Luxe-Four Hands Massage with Organic Aromatherapy(90)':270,
+  'Luxe-100% Pure Oil Massage with Fresh Herbal Compress (90)':270,
+  'Luxe - Thai Fusion Massage (90)':270,'Mar2025-Luxe Thai Massage (90)':270,
+  'Mar2025- Luxe Foot Massage (90)':270,'Mar2025-Luxe Thai Massage With Herbal Compress (90)':270,
+  'Mar2025-Luxe Foot Massage With Herbal Compress(90)':270,
+  'OS-A Day Onsen Retreat 1 (90-mins)':270,'OS-Authentic Thai Massage (90-min)':270,
+  'OS-Signature Foot Massage (90-min)':270,'OS-Signature Kung Fu Fusion Oil Massage (90-min)':270,
+  'OS-Signature Kung Fu Fusion Dry Massage (90-min)':270,'OS-Signature Lomi Lomi Massage (90-min)':270,
+  'OS-Signature Shiatsu Fusion Massage (90-min)':270,'OS-Signature Seitai Fusion Massage (90-min)':270,
+  'OS-Guasa Facial Treatment (90-min)':270,'OS-POM-FEB-JUN26 A day Onsen (90-min)':270,
+  'OS-Klook-A Day Onsen Retreat 1 (90-mins)':270,
+  'OS-Dry or Oil Massage With Fresh Herbal Compress (90-min)':270,
+  'Office Stress Relief(90)':270,'DIORA Beauty Express I(90)':270,'DIORA Beauty Express II (90)':270,
+  'Klook-JUL24-AROMA OIL MASSAGE (90)':270,'GoWabi-JUL24-Organic Aromatherapy Oil Massage(90)':270,
+  'KKDay-AROMATHERAPY OIL MASSAGE (90)':270,'KKDay-100% PURE OIL MASSAGE (90)':270,
+  'ClassPass-SEP25-AROMATHERAPY OIL MASSAGE (90)':270,
+  'ClassPass-SEP25-100% PURE OIL MASSAGE WITH HERBAL BALL (90)':270,
+  'ClassPass-SEP25-DIORA Beauty Express PKG II (90)':270,'ClassPass-SEP25-DIORA Beauty Express PKG I (90)':270,
+  'ClassPass-SEP25-FOUR HANDS AROMATHERAPY OIL MASSAGE (90)':270,
+  'CLASSPASS-JAN25-SIGNATURE ORGANIC OIL MASSAGE (90)':270,
+  'Klook-JUL24-100% PURE OIL MASSAGE WITH HERBAL BALL (90)':270,
+  'GoWabi-JUL24-100% Pure Oil Massage with Herbal Compress (90)':270,
+  'TRIP-Organic Aromatherapy Oil Massage (90)':270,'TRIP-100% Pure Oil Massage (90)':270,
+  'ThaiHand-JUL24-AROMA OIL MASSAGE (90)':270,'GoWabi-JUL24-Warm Oil Head Massage (90)':270,
+  'Luxe - Body Lotion Massage (90)':270,'Member-Kids Spa-Little Relaxation (90)':270,
+  'AS-FEB-JUN26-Aroma Oil Massage (90) + Free massage (30)':360,
+  'ThaiHand-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (90)':300,
+  'Luxe-Organic Aromatherapy/100% Pure Oil with Hot Stone(90)':300,
+  'GoWabi-JUL24-Organic Aroma Oil Massage with Hot Stone(90)':300,
+  'GOWABI-JAN25-SIGNATURE ORGANIC OIL MASSAGE WITH HOT STONE (90)':300,
+  'KKDay-ORGANIC AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE(90)':300,
+  'Klook-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (90)':300,
+  'ClassPass-SEP25-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (90)':300,
+  'TRIP-Organic Aromatherapy/100% Pure Oil with Hot Stone(90)':300,
+  'OS-Signature Japanese Hot Stone Massage (90-min)':300,
+  'Luxe-100% Pure Oil Massage (120)':360,'Luxe-Organic Aromatherapy Oil Massage (120)':360,
+  'Luxe-Four Hands 100% Pure Oil Massage(120)':360,
+  'Luxe-Four Hands Massage with Organic Aromatherapy Oil Massage(120))':360,
+  'Luxe-100% Pure Oil Massage with Fresh Herbal Compress (120)':360,
+  'Luxe - Thai Fusion  Massage (120)':360,'Mar2025-Luxe Thai Massage (120)':360,
+  'Mar2025-Luxe Foot Massage (120)':360,'Mar2025-Luxe Thai Massage With Herbal Compress  (120)':360,
+  'Mar2025-Luxe Foot Massage With Herbal Compress (120)':360,
+  'LS Four Hands Massage with 100% Pure Oil (120)':360,
+  'Klook-JUL24-AROMA OIL MASSAGE (120)':360,'Klook-JUL24-100% PURE OIL MASSAGE WITH HERBAL BALL (120)':360,
+  'GoWabi-JUL24-100% Pure Oil Massage with Herbal Compress (120)':360,
+  'Early Bird-FEB-APR26-Thai Fusion Massage (120)':360,'15%OFF-NOV25-Thai Fusion Massage(120)':360,
+  'Kids Spa-DEC24-Mommy&Me (120)':360,'Kids Spa-DEC24-You Are My Angel (120)':360,
+  'Early Bird-100% Pure Oil/ Organic Aromatherapy Oil massage with Hot Stone (120) Free Massage Oil':400,
+  '[Exclusive Offer] Organic Aromatherapy Oil Massage 90 Mins Get Free Foot Massage or Neck & Shoulder Massage 30 Mins':360,
+  '[Exclusive Offer] Organic Aromatherapy Oil Massage 120 Mins Get Free Foot Massage or Neck & Shoulder Massage 30 Mins':450,
+  'FEB-APR26-Aroma Oil Massage (120) + (Foot or Neck & Shoulder Massage)(30)':450,
+  'Luxe-Organic Aromatherapy/100% Pure Oil with Hot Stone(120)':400,
+  'Klook-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (120)':400,
+  'GoWabi-JUL24-Organic Aroma Oil Massage with Hot Stone (120)':400,
+  'KKDay-ORGANIC AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE(120)':400,
+  'ClassPass-SEP25-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (120)':400,
+  'ThaiHand-JUL24-AROMATHERAPY/100% PURE OIL MASSAGE WITH HOT STONE (120)':400,
+  '10%OFF-NOV25-100% Pure Oil/Aromatherapy Oil Massage with Hot Stone (120)':400,
+  'DIORA HEVENLY BLISS I (150)':435,'DIORA HEVENLY BLISS II (150)':435,
+  'GoWabi-JUL24-DIORA Heavenly Bliss (II) (150)':435,'DIORA Blissful Retreat (150)':480,
+  'OS-GoWabi-Sensory Heaven Onsen Package Couple (180-Minute)':460,
+  'OS-Klook-Sensory Heaven Onsen Package Couple (180-Minute)':460,
+  'OS-Klook-Rebalance Jet lag kung Fu Couple Package (180-Minute)':460,
+  'OS-Sensory Heaven Onsen Package Couple (180-min)':460,'OS-Sensory Heaven Onsen Package (180-min)':460,
+  'OS-Rebalance Jet Lag Kung Fu Package (180-min)':460,'OS-Rebalance Jet Lag Kung Fu Package Couple (180-min)':460,
+  'Jet Lag Recovery Package A (180)':495,'Jet Lag Recovery Package B (180)':495,
+  'KLOOK-15%OFF-JET LAG RECOVERY B(180)':495,
+  'DIORA Remedy I (180)':540,'DIORA Silk Secret 1 (180)':540,'DIORA Silk Secret II (180)':540,
+  'KLOOK-30%OFF-MAR-APR26-DIORA SILK SECRET II (180)':540,'Klook-JUL24-DIORA SILK SECRET I (180)':540,
+  'KLOOK-WEEKDAY-DEC25 BUY1GET2 SILK SECRET II':540,
+  'OS-The Sound of Japanese Furin Touches of Heart Package 1 (195-min)':550,
+  'OS-The Sound of Japanese Furin Touches of Heart Package 1 Couple (195-min)':550,
+  'OS-Klook-The Sound of Japanese Furin Touches of Heart Package 1 Couple (195-Minute)':550,
+  'OS-The Sound of Japanese Furin Touches of Heart Package 2 Couple  (150-min)':370,
+  'OS-GoWabi-The Sound of Japanese Furin Touches of Heart Package 2 Couple (150-Minute)':370,
+  'B1G1-MAR26-DIORA DEEP RELIEF(180)':570,'KLOOK-B1G1-MAR26-DIORA DEEP RELIEF(180)':570,
+  '20%OFF-NOV25-DIORA Deep Relief (180)':570,'DIORA Journey On Foot II (210)':570,
+  'DIORA Remedy II (180)':580,'Klook-JUL24-DIORA REMEDY II (180)':580,
+  'DIORA Journey On Foot I (210)':600,'GoWabi-JUL24-DIORA Journey On Foot Package (I) (210)':600,
+  'DIORA Essence of Warmth I (210)':630,'OS-Energizing of Life Package':640,
+  'OS-Energizing of Life Package Couple (255-min)':640,
+  'DIORA Essence of Warmth II (210)':670,'TRIP-DIORA ESSENCE OF WARMTH II (210)':670,
+  'DIORA Duet Indulge I (240)':690,'Klook-JUL24-DIORA DUET INDULGE II (240)':730,
+  'DIORA Duet Indulge II (240)':730,'KLOOK-JAN25-DIORA DUET INDULGE Package B (240)':730,
+  'DIORA Temple of Dreams I (300)':870,'DIORA Temple of Dreams II (300)':910,
+  'OS-Signature Ultimate Bathing Ritual Package':920,
+  'OS-Klook-Signature Ultimate Bathing Ritual Package (405-Minute)':920,
+  'OS-Signature Ultimate Bathing Ritual Couple Package':920,
+};
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const payrollFiles = [];
+let comMapExtra = {};
+let masterRecords = [];       // accumulated per-employee-per-day records for master
+let msDirty = false;
+
+// ── Branch Detail Table edit state ──────────────────────
+// _bdtEdits[br] = { masterIndex: { field: newValue, ... }, ... }
+let _bdtEdits    = {};   // pending edits per branch
+let _bdtEditing  = {};   // { br: true/false } — which branches are in edit mode
+let _bdtNewRows  = {};   // { br: [{nick,com,ot,r,s,lvl,tip}] } — pending new rows
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+function getNick(therapist) {
+  const s = String(therapist || '');
+
+  // Build a case-insensitive lookup against PAYROLL_NICK_MAP then NICK_INFO
+  function resolve(raw) {
+    if (!raw) return raw;
+    // 1. Exact match in PAYROLL_NICK_MAP
+    if (PAYROLL_NICK_MAP[raw]) return PAYROLL_NICK_MAP[raw];
+    // 2. Case-insensitive match in PAYROLL_NICK_MAP
+    const rawL = raw.toLowerCase();
+    for (const k of Object.keys(PAYROLL_NICK_MAP)) {
+      if (k.toLowerCase() === rawL) return PAYROLL_NICK_MAP[k];
+    }
+    // 3. Exact match in NICK_INFO
+    if (NICK_INFO[raw]) return raw;
+    // 4. Case-insensitive match in NICK_INFO
+    for (const k of Object.keys(NICK_INFO)) {
+      if (k.toLowerCase() === rawL) return k;
+    }
+    return raw;
+  }
+
+  // Split a CamelCase/PascalCase string at the first internal capital boundary
+  // e.g. "TikJiraphan" → "Tik", "JaneSmith" → "Jane"
+  // All-caps words (BB, DA, JO, BEW, PLERN) are returned as-is — no splitting
+  function splitCamel(w) {
+    if (/^[A-Z]+$/.test(w)) return w; // all-caps nick like BB, DA, BEW
+    const m = w.match(/^([A-Z][a-z]+)/); // PascalCase: take first capitalised word
+    return m ? m[0] : w;
+  }
+
+  // Format: "Full Name (Nick)" or "Full Name (NickSurname)" — closing paren present
+  const m = s.match(/\(([^)]+)\)/);
+  if (m) {
+    const raw = m[1].trim().split(/\s+/)[0]; // first word inside parens
+    return resolve(splitCamel(raw));
+  }
+
+  // Format: "(NickSurname..." — missing closing paren
+  const m2 = s.match(/^\(([A-Za-z]+)/);
+  if (m2) return resolve(splitCamel(m2[1].trim()));
+
+  // Fallback: first word of the full string
+  const first = s.trim().split(/\s+/)[0];
+  return resolve(splitCamel(first));
+}
+
+function isOsItem(item) {
+  return /\bOS[-\s]|\bONSEN\b/i.test(item);
+}
+function isOsLevelNick(nick) {
+  return OS_LEVEL.has(nick);
+}
+function classifyType(item) {
+  if (!item) return 'Com';
+  if (/\bRequest\b/i.test(item)) return 'R';
+  if (/\bSupport\b/i.test(item)) return 'S';
+  if (/Over\s*Time/i.test(item)) return 'OT';
+  return 'Com';
+}
+function getEffectiveMap() {
+  return Object.assign({}, COM_MAP, comMapExtra);
+}
+function parseSaleDate(val) {
+  if (!val) return null;
+  // Date object from XLSX cellDates:true — extract local date parts to avoid UTC shift
+  if (val instanceof Date) {
+    if (isNaN(val)) return null;
+    return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+  }
+  const s = String(val).trim();
+  // DD/MM/YYYY or D/M/YY
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m) {
+    let yr = parseInt(m[3]);
+    if (yr < 100) yr += 2000;
+    return new Date(yr, parseInt(m[2]) - 1, parseInt(m[1]));
+  }
+  // YYYY-MM-DD
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m2) return new Date(parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
+  // Excel serial number
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const d = new Date(val);
+  return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dd = d instanceof Date ? d : new Date(d);
+  return dd.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+function fmtDateShort(d) {
+  const dd = d instanceof Date ? d : new Date(d);
+  return `${dd.getDate()}/${dd.getMonth()+1}/${dd.getFullYear()}`;
+}
+function dateToISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function numFmt(n) {
+  return n ? n.toLocaleString() : '';
+}
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+// Preserve manually-entered Level/Tip bonuses when a date's records are replaced.
+// Payroll files never carry Level/Tip (those are entered by hand in the Day Detail
+// Panel), so without this, re-uploading/merging a date would silently reset them to 0.
+// ═══════════════════════════════════════════════════════
+//  WORKING-TIME (minutes) + AUTO LEVEL฿  (added 2026-06-15)
+//  Service duration is parsed from the item name. S/OT/R = 0 (no duration).
+//  Couple/Four-Hands already produce one payroll row per therapist, so each
+//  row's minutes count for that therapist. Rules:
+//   • text after "Free"/"Get Free" is ignored (free portion not paid time)
+//   • additive items ("A (30) + B (15)") sum all parenthesised durations
+//   • otherwise (NN-min)/(NN mins)/(NN-Minute)/(NN) is used
+//   • SERVICE_MIN_OVERRIDE covers items whose name carries no duration
+// ═══════════════════════════════════════════════════════
+const SERVICE_MIN_OVERRIDE = {
+  'OS-Energizing of Life Package': 255,
+  'OS-Signature Ultimate Bathing Ritual Package': 405,
+  'OS-Signature Ultimate Bathing Ritual Couple Package': 405,
+  'Luxe- Anti Aging Facial (Gold collagen mask)': 60,
+  'AROMA 60-MASALA WEDDING FAIR A-LaCart 2025': 60,
+  'KLOOK-WEEKDAY-DEC25 BUY1GET2 SILK SECRET II': 180,
+  'Complimentary Food&Drink': 0,
+};
+function serviceMinutes(item){
+  if(!item) return 0;
+  if(SERVICE_MIN_OVERRIDE[item] != null) return SERVICE_MIN_OVERRIDE[item];
+  let s = item;
+  // Check additive '+' BEFORE any Free-cut so "(NN) + Free ... (NN)" sums both durations
+  if(s.includes('+')){
+    const all = [...s.matchAll(/\((\d{2,3})\)/g)].map(m=>+m[1]);
+    if(all.length) return all.reduce((a,b)=>a+b,0);
+  }
+  // "NNN Mins Get Free ... NNN Mins" — count ALL numeric durations (therapist works both)
+  const fi = s.search(/\bfree\b/i);
+  if(fi >= 0){
+    const allMins = [...s.matchAll(/(\d{2,3})\s*[Mm]in/g)].map(m=>+m[1]);
+    if(allMins.length >= 2) return allMins.reduce((a,b)=>a+b,0);
+    s = s.slice(0, fi);   // single duration before "Free Massage Oil" etc — trim as before
+  }
+  let m = s.match(/\((\d{2,3})\s*-?\s*(?:min|mins|minute|minutes)\b/i); if(m) return +m[1];
+  m = s.match(/(\d{2,3})\s*-?\s*(?:min|mins|minute|minutes)\b/i);       if(m) return +m[1];
+  const all = [...s.matchAll(/\((\d{2,3})\)/g)].map(x=>+x[1]);
+  if(all.length) return all[all.length-1];
+  return 0;
+}
+// Auto Level฿ from working hours (proportional). Only Gold/Silver are eligible.
+const LEVEL_RATE = { Gold: 50, Silver: 20 };   // ฿ per hour
+function levelAutoBaht(level, mins){
+  const rate = LEVEL_RATE[level] || 0;
+  return Math.round((mins||0) / 60 * rate);
+}
+// Level฿ stored per branch (Level_LS..Level_OS) — read it back for display/sums.
+function levelBranchBaht(r, br){ return r['Level_'+br] || 0; }
+
+function _preserveLevelTip(newRecs, removedRecs) {
+  // Level฿ is auto-computed from working hours at import — do NOT carry it over.
+  // Only manually-entered Tip is preserved across a re-import of the same date.
+  const prevByKey = {};
+  for (const r of removedRecs) {
+    if ((r.Tip||0) > 0) prevByKey[(r.date||'')+'|'+r.nick] = { Tip: r.Tip||0 };
+  }
+  for (const rec of newRecs) {
+    const prev = prevByKey[(rec.date||'')+'|'+rec.nick];
+    if (!prev) continue;
+    if (!rec.Tip) rec.Tip = prev.Tip;
+  }
+}
+// ── Per-branch OT/R/S helpers (added 2026-06-12) ────────────────────────────
+const _BR_ALL = ['LS','AS','SK','LP','OS'];
+function _hasPerBranchOTRS(r) {
+  return _BR_ALL.some(b => (r['OT_'+b]||0) > 0 || (r['R_'+b]||0) > 0 || (r['S_'+b]||0) > 0);
+}
+function _primaryBranchOf(r) {
+  let best = null, bestVal = 0;
+  for (const b of _BR_ALL) { if ((r[b]||0) > bestVal) { bestVal = r[b]||0; best = b; } }
+  if (best === null && r.isOsLevel) return 'OS';
+  return best;
+}
+// Promote a legacy record (totals only, no per-branch OT/R/S) to per-branch
+// storage by seeding its primary branch with the stored totals. Must run before
+// any save that recalculates r.OT/R/S from per-branch sums — otherwise legacy
+// totals are silently wiped to 0.
+function _seedLegacyPerBranch(r) {
+  if (_hasPerBranchOTRS(r)) return;
+  if (!(r.OT||0) && !(r.R||0) && !(r.S||0)) return;
+  const pb = _primaryBranchOf(r) || 'LS';
+  for (const b of _BR_ALL) { r['OT_'+b] = 0; r['R_'+b] = 0; r['S_'+b] = 0; }
+  r['OT_'+pb] = r.OT||0; r['R_'+pb] = r.R||0; r['S_'+pb] = r.S||0;
+}
+// Branch that "owns" a person's Level฿/Tip = branch with largest total activity.
+// Level/Tip are counted ONCE (in this branch only) so branch totals sum to the
+// grand total instead of double-counting across branches.
+function _levelTipBranch(r) {
+  let best = null, bestVal = 0;
+  for (const b of _BR_ALL) {
+    const v = (r[b]||0) + (r['OT_'+b]||0) + (r['R_'+b]||0) + (r['S_'+b]||0);
+    if (v > bestVal) { bestVal = v; best = b; }
+  }
+  return best || _primaryBranchOf(r) || (r.isOsLevel ? 'OS' : 'LS');
+}
+// Reconcile per-branch OT/R/S after the total r[typ] was edited directly
+// (Day Detail summary table edits totals, not the per-branch breakdown).
+function _syncPerBranchTotal(r, typ) {
+  const newTotal = r[typ]||0;
+  const oldSum = _BR_ALL.reduce((s,b)=>s+(r[typ+'_'+b]||0),0);
+  if (oldSum === newTotal) return;
+  if (oldSum > 0) {
+    // scale existing breakdown proportionally; put rounding remainder on the largest branch
+    let acc = 0, maxB = null;
+    for (const b of _BR_ALL) {
+      const v = Math.round((r[typ+'_'+b]||0) * newTotal / oldSum);
+      r[typ+'_'+b] = v; acc += v;
+      if (maxB === null || v > (r[typ+'_'+maxB]||0)) maxB = b;
+    }
+    r[typ+'_'+maxB] = Math.max(0, (r[typ+'_'+maxB]||0) + (newTotal - acc));
+  } else {
+    const pb = _primaryBranchOf(r) || 'LS';
+    for (const b of _BR_ALL) r[typ+'_'+b] = 0;
+    r[typ+'_'+pb] = newTotal;
+  }
+}
+
+function detectPeriod(dates) {
+  if (!dates || !dates.length) {
+    const now = new Date();
+    return { startDate: new Date(now.getFullYear(), now.getMonth()-1, 21), endDate: new Date(now.getFullYear(), now.getMonth(), 20) };
+  }
+  let minDate = dates.reduce((a,b) => a < b ? a : b);
+  let startYear = minDate.getFullYear(), startMonth = minDate.getMonth();
+  if (minDate.getDate() < 21) {
+    startMonth--;
+    if (startMonth < 0) { startMonth = 11; startYear--; }
+  }
+  const startDate = new Date(startYear, startMonth, 21);
+  let endMonth = startMonth + 1, endYear = startYear;
+  if (endMonth > 11) { endMonth = 0; endYear++; }
+  return { startDate, endDate: new Date(endYear, endMonth, 20) };
+}
+function getCoKey(company) {
+  const c = (company||'').toLowerCase();
+  if (c === 'sinsub') return 'sinsub';
+  if (c === 'sukjai') return 'sukjai';
+  if (c === 'happines') return 'happines';
+  return 'unknown';
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILE UPLOAD — DAILY TAB
+// ═══════════════════════════════════════════════════════
+// (daily-tab upload flow removed 2026-06-12 — uploads are handled by msHandleFiles)
+// ── Parse Invoice/Payroll Excel file → [{fullName, item, saleDate, branch, inv, comVal}] ──
+async function parsePayrollFile(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        let hdrIdx = -1;
+        for (let i = 0; i < Math.min(8, rows.length); i++) {
+          const r = rows[i].map(c => String(c));
+          if (r.includes('Employee Name') || r.includes('Commission')) { hdrIdx = i; break; }
+        }
+        if (hdrIdx < 0) { resolve([]); return; }
+
+        // Extract declared payroll period from header rows (e.g. row 3:
+        // "Employee Payroll From: 21 Apr 2026 To: 20 May 2026")
+        let declaredFrom = null, declaredTo = null;
+        for (let i = 0; i < hdrIdx; i++) {
+          const rowStr = rows[i].map(c => String(c)).join(' ');
+          const m = rowStr.match(/From[:\s]+([\d]{1,2}[\s\/\-][A-Za-z]+[\s\/\-][\d]{4})\s+To[:\s]+([\d]{1,2}[\s\/\-][A-Za-z]+[\s\/\-][\d]{4})/i);
+          if (m) {
+            const d1 = new Date(m[1]); const d2 = new Date(m[2]);
+            if (!isNaN(d1)) declaredFrom = d1;
+            if (!isNaN(d2)) declaredTo   = d2;
+            break;
+          }
+        }
+        const headers = rows[hdrIdx].map(h => String(h).trim());
+        const iJob  = headers.indexOf('Job');
+        const iName = headers.indexOf('Employee Name');
+        const iItem = headers.indexOf('Item');
+        const iInv  = headers.indexOf('Invoice No');
+        const iDate = headers.indexOf('Service Date');
+        const iCom  = headers.indexOf('Commission');
+
+        // Build set of LP invoice numbers that contain at least one OS item.
+        // Used below to correctly assign OS branch to Support/OT/Request rows
+        // that share an invoice with an OS service item.
+        const lpOsInvoices = new Set();
+        for (let r = hdrIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (String(row[iJob] || '').trim().toUpperCase() !== 'THERAPIST') continue;
+          const inv  = String(row[iInv]  || '').trim();
+          const item = String(row[iItem] || '').trim();
+          if (inv.startsWith('LP') && item.startsWith('OS')) lpOsInvoices.add(inv);
+        }
+
+        const records = [];
+        for (let r = hdrIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (String(row[iJob] || '').trim().toUpperCase() !== 'THERAPIST') continue;
+          const fullName = String(row[iName] || '').trim();
+          if (!fullName || /z_dumm/i.test(fullName)) continue;
+          const item   = String(row[iItem] || '').trim();
+          const inv    = String(row[iInv]  || '').trim();
+          const comVal = parseFloat(String(row[iCom] || '0').replace(/,/g, '')) || 0;
+          const saleDate = parseSaleDate(row[iDate]);
+          if (!saleDate || isNaN(saleDate)) continue;
+          let branch;
+          if      (inv.startsWith('LS')) branch = 'LS';
+          else if (inv.startsWith('AS')) branch = 'AS';
+          else if (inv.startsWith('SK')) branch = 'SK';
+          else if (inv.startsWith('OS')) branch = 'OS';
+          else if (inv.startsWith('LP')) {
+            // LP invoice + OS item → OS branch (commission records)
+            // LP invoice + non-OS item BUT invoice is in lpOsInvoices → OS branch (Support/OT/Request)
+            const typ = classifyType(item);
+            if (item.startsWith('OS')) {
+              branch = 'OS';
+            } else if ((typ === 'S' || typ === 'OT' || typ === 'R') && lpOsInvoices.has(inv)) {
+              branch = 'OS';
+            } else {
+              branch = 'LP';
+            }
+          }
+          else branch = '?';
+          // Apply COM_MAP overrides: always use fixed rate if item is in COM_MAP
+          // (overrides whatever value is in the Payroll file)
+          const map = getEffectiveMap();
+          let finalComVal = (map[item] !== undefined) ? map[item] : comVal;
+          // OS-level employees are salary-based — commission always 0
+          const nick_check = getNick(fullName);
+          const effectiveComVal = isOsLevelNick(nick_check) ? 0 : finalComVal;
+          records.push({ fullName, item, saleDate, branch, inv, comVal: effectiveComVal, min: classifyType(item)==='Com' ? serviceMinutes(item) : 0 });
+        }
+        resolve({ records, declaredFrom, declaredTo });
+      } catch(err) {
+        console.error('[DIORA] parsePayrollFile error:', err);
+        resolve([]);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+
+// ── Helper: build per-nick summary rows from a set of raw records ──
+function _buildRowsFromRecs(recs) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const byNick = {};
+  const nickFullName = {};
+  for (const rec of recs) {
+    const nick  = getNick(rec.fullName);
+    const typ   = classifyType(rec.item);
+    const osLvl = isOsLevelNick(nick);
+    const comVal = rec.comVal || 0;
+    if (!byNick[nick]) {
+      const init = {LS:0,AS:0,SK:0,LP:0,OS:0,R:0,OT:0,S:0,Level:0,Tip:0,mins:0,isOsLevel:osLvl};
+      // per-branch breakdown for OT/R/S
+      for (const b of BRANCHES) { init['OT_'+b]=0; init['R_'+b]=0; init['S_'+b]=0; init['mins_'+b]=0; }
+      byNick[nick] = init;
+    }
+    nickFullName[nick] = rec.fullName;
+    byNick[nick].mins += (rec.min||0);
+    const br = rec.branch && BRANCHES.includes(rec.branch) ? rec.branch : null;
+    if (br) byNick[nick]['mins_'+br] += (rec.min||0);
+    if (typ === 'R')  { byNick[nick].R += comVal; if (br) byNick[nick]['R_'+br]  += comVal; }
+    else if (typ === 'OT') { byNick[nick].OT += comVal; if (br) byNick[nick]['OT_'+br] += comVal; }
+    else if (typ === 'S')  { byNick[nick].S  += comVal; if (br) byNick[nick]['S_'+br]  += comVal; }
+    else { if (br) byNick[nick][br] += comVal; }
+  }
+  return Object.keys(byNick).sort().map(nick => {
+    const d = byNick[nick]; const info = NICK_INFO[nick];
+    const lvl = info?info.level:'?';
+    const row = { nick, fullName: nickFullName[nick]||nick,
+      company: info?info.company:'?', level: lvl,
+      LS:d.LS,AS:d.AS,SK:d.SK,LP:d.LP,OS:d.OS,
+      R:d.R,OT:d.OT,S:d.S,mins:d.mins,Tip:0,isOsLevel:d.isOsLevel };
+    let lvTot = 0;
+    for (const b of BRANCHES) {
+      row['OT_'+b]=d['OT_'+b]; row['R_'+b]=d['R_'+b]; row['S_'+b]=d['S_'+b];
+      row['mins_'+b]=d['mins_'+b];
+      row['Level_'+b]=levelAutoBaht(lvl, d['mins_'+b]);   // Level฿ from THIS branch's hours
+      lvTot += row['Level_'+b];
+    }
+    row.Level = lvTot;                                     // total = sum of branches
+    return row;
+  });
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════
+//  MASTER SUMMARY
+// ═══════════════════════════════════════════════════════
+function msInit() {
+  ghLoadSettings();
+  if (!masterRecords.length) msLoadLocal();
+  msRefreshUI();
+  // Auto-collapse GitHub settings if already configured
+  const { token, repo } = ghGetConfig();
+  if (token && repo) {
+    setTimeout(() => ghToggleCollapse(), 100);
+  }
+}
+
+function msLoadLocal() {
+  try {
+    const raw = localStorage.getItem('diora_master_v2');
+    if (raw) { masterRecords = JSON.parse(raw); return true; }
+  } catch(e) {}
+  return false;
+}
+function msSaveLocal(skipRefresh) {
+  try {
+    localStorage.setItem('diora_master_v2', JSON.stringify(masterRecords));
+  } catch(e) {
+    showStatus('error', '❌ พื้นที่ localStorage เต็ม — กรุณา Export ข้อมูลก่อนเพิ่มข้อมูลใหม่');
+  }
+  msDirty = true;
+  if (!skipRefresh) msRefreshUI();
+}
+
+function msRefreshUI(newDates) {
+  const has = masterRecords.length > 0;
+  document.getElementById('ms-empty').style.display = has ? 'none' : '';
+  document.getElementById('ms-cal-card').style.display = has ? '' : 'none';
+  const bar = document.getElementById('ms-period-bar');
+  bar.style.display = has ? '' : 'none';
+  if (!has) return;
+
+  // Stats — exclude unknown employees (company='?') from totals and counts
+  const allDates = new Set();
+  const allNicks = new Set();
+  let totalCom = 0, totalExtra = 0;
+  for (const r of masterRecords) {
+    (r.date||'').split(',').forEach(d => { if (d.trim()) allDates.add(d.trim()); });
+    if ((r.company||'?') === '?') continue; // exclude unknowns
+    allNicks.add(r.nick);
+    totalCom   += (r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0);
+    totalExtra += (r.R||0)+(r.OT||0)+(r.S||0);
+  }
+  const allDatesSorted = [...allDates].filter(d=>d).sort();
+
+  // Use actual min/max of stored dates for calendar range
+  // (don't lock to fixed 1-month period — data may span multiple months)
+  let startDate, endDate;
+  if (allDatesSorted.length) {
+    const dateObjs = allDatesSorted.map(d => new Date(d));
+    const minD = dateObjs[0];
+    const maxD = dateObjs[dateObjs.length - 1];
+    // Expand range: start = 21st of month before minD (or same month if minD >= 21)
+    // end = 20th of month after maxD (or same month if maxD <= 20)
+    const { startDate: s } = detectPeriod([minD]);
+    // endDate = 20th of the month that contains maxD's period
+    let eMonth = maxD.getMonth() + (maxD.getDate() > 20 ? 1 : 0);
+    let eYear  = maxD.getFullYear();
+    if (eMonth > 11) { eMonth = 0; eYear++; }
+    endDate   = new Date(eYear, eMonth, 20);
+    startDate = s;
+    // If endDate < maxD (edge case), push forward one more month
+    if (endDate < maxD) {
+      eMonth++; if (eMonth > 11) { eMonth = 0; eYear++; }
+      endDate = new Date(eYear, eMonth, 20);
+    }
+  } else {
+    const p = detectPeriod([]);
+    startDate = p.startDate; endDate = p.endDate;
+  }
+
+  const periodStr = `${fmtDate(startDate)} – ${fmtDate(endDate)}`;
+  document.getElementById('ms-pb-period').textContent = periodStr;
+  document.getElementById('ms-pb-days').textContent   = allDates.size + ' วัน';
+  document.getElementById('ms-pb-com').textContent    = '฿' + totalCom.toLocaleString();
+  document.getElementById('ms-pb-extra').textContent  = '฿' + totalExtra.toLocaleString();
+  document.getElementById('ms-pb-emp').textContent    = allNicks.size + ' คน';
+
+  msRenderCalendar(startDate, endDate, allDates, newDates);
+  msRenderTable();
+}
+
+// ═══════════════════════════════════════════════════════
+//  CALENDAR — Date Status UI
+// ═══════════════════════════════════════════════════════
+function msRenderCalendar(startDate, endDate, existingDates, newDates) {
+  const grid = document.getElementById('ms-cal-grid');
+  if (!grid) return;
+
+  const today = dateToISO(new Date());
+  const newSet = new Set(newDates || []);
+
+  // Collect all dates in the period range day by day
+  let html = '';
+  let cur = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const MON_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  let lastMonth = -1;
+
+  while (cur <= end) {
+    const iso = dateToISO(cur);
+    const m = cur.getMonth();
+    // Month label
+    if (m !== lastMonth) {
+      html += `<div class="cal-month-label">${MON_TH[m]} ${cur.getFullYear()}</div>`;
+      lastMonth = m;
+    }
+    const isToday    = iso === today;
+    const hasData    = existingDates.has(iso);
+    const isNew      = newSet.has(iso);
+    let cls = 'cal-day ';
+    if (isNew)       cls += 'new-data';
+    else if (hasData) cls += 'has-data';
+    else             cls += 'empty';
+    if (isToday)     cls += ' today';
+
+    const label = cur.getDate();
+    const tip   = hasData ? `${iso} — มีข้อมูลแล้ว${isNew?' (อัปเดตล่าสุด)':''}` : `${iso} — ยังไม่มีข้อมูล`;
+    const clickAttr = hasData ? `onclick="msShowDayPanel('${iso}',this)"` : '';
+    const extraCls  = hasData ? ' clickable' : '';
+    html += `<div class="${cls}${extraCls}" title="${tip}" data-iso="${iso}" ${clickAttr}>${label}</div>`;
+    cur.setDate(cur.getDate() + 1);
+  }
+  grid.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DAY DETAIL PANEL
+// ═══════════════════════════════════════════════════════
+//  DAY DETAIL PANEL — คลิกวันในปฏิทินเพื่อดู/แก้ไข
+// ═══════════════════════════════════════════════════════
+let _ddpIso     = null;   // ISO วันที่ที่เลือก
+let _ddpEditing = false;  // โหมดแก้ไข
+let _ddpEdits   = {};     // {masterIdx: {field: val}} รอ save
+let _ddpOrder   = [];     // [masterIdx, ...] ลำดับแถวในวันนี้ (สำหรับ drag)
+let _ddpDragSrc = null;   // index ใน _ddpOrder ที่กำลัง drag
+let _ddpSearch  = '';     // ข้อความค้นหา
+
+// ── helper: ISO → label ไทย ─────────────────────────
+function _isoToThai(iso) {
+  const MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const [yr, mo, dy] = iso.split('-').map(Number);
+  return `${dy} ${MON[mo - 1]} ${yr}`;
+}
+
+// ── helper: หา indices ใน masterRecords สำหรับวันนี้ ─
+function _ddpGetIndices(iso) {
+  return masterRecords
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => (r.date || '').split(',').map(s => s.trim()).includes(iso))
+    .map(({ i }) => i);
+}
+
+// ── เปิด panel เมื่อคลิกวันในปฏิทิน ───────────────
+function msShowDayPanel(iso, el) {
+  document.querySelectorAll('.cal-day.selected').forEach(d => d.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+
+  _ddpIso     = iso;
+  _ddpEditing = false;
+  _ddpEdits   = {};
+  _bdtEditing = {};
+  _bdtEdits   = {};
+  _bdtNewRows = {};
+  _ddpOrder   = _ddpGetIndices(iso);
+  _ddpSearch  = '';
+
+  const panel = document.getElementById('day-detail-panel');
+  panel.style.display = 'block';
+  document.getElementById('ddp-title').textContent = `📋 ${_isoToThai(iso)}`;
+
+  _ddpRefreshButtons();
+  _ddpRender();
+  // scrollIntoView removed — caused unwanted scroll on every calendar click
+}
+
+// ── อัปเดตปุ่ม header ────────────────────────────────
+function _ddpRefreshButtons() {
+  const has = _ddpOrder.length > 0;
+  // ddp-btn-total removed (moved to period bar)
+  _ddpShow('ddp-btn-edit',   has && !_ddpEditing);
+  _ddpShow('ddp-btn-save',   _ddpEditing);
+  _ddpShow('ddp-btn-cancel', _ddpEditing);
+  _ddpShow('ddp-btn-delday', has && !_ddpEditing);
+  _ddpShow('ddp-hint',       _ddpEditing);
+}
+function _ddpShow(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+// ── render ตาราง ─────────────────────────────────────
+function _ddpRender() {
+  const body = document.getElementById('ddp-body');
+  if (!_ddpOrder.length) {
+    body.innerHTML = `<div class="ddp-empty">ไม่มีข้อมูลสำหรับวันนี้</div>`;
+    return;
+  }
+
+  const FIELDS  = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+  const CO_KEY  = { Sinsub:'sinsub', Sukjai:'sukjai', Happines:'happines' };
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+
+  // filter ตาม search
+  const sq = _ddpSearch.toLowerCase().trim();
+
+  // จัดกลุ่มตามบริษัท แต่เก็บลำดับใน _ddpOrder
+  const byCompany = {};
+  COMPANIES.forEach(c => byCompany[c] = []);
+  _ddpOrder.forEach((mi, pos) => {
+    const r  = masterRecords[mi];
+    if (sq && !(r.nick||'').toLowerCase().includes(sq) && !(r.fullName||'').toLowerCase().includes(sq)) return;
+    const co = COMPANIES.slice(0,3).includes(r.company) ? r.company : '?';
+    byCompany[co].push({ mi, pos });
+  });
+
+  const totalFiltered = COMPANIES.reduce((s,c)=>s+byCompany[c].length, 0);
+
+  // Branch detail tables (แสดงเฉพาะ view mode ไม่แสดงตอน edit หรือ search)
+  const branchTablesHtml = (!_ddpEditing) ? _ddpRenderBranchTables(_ddpIso) : '';
+
+  let html = `${branchTablesHtml}
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="font-size:13px;font-weight:700;color:#2d3748">📋 ตารางรวม</div>
+    <div style="display:flex;gap:6px">${
+      _ddpEditing
+        ? '<button class="btn-action btn-green" onclick="ddpSave()">💾 บันทึก</button><button class="btn-action btn-gray" onclick="ddpCancelEdit()">✕ ยกเลิก</button>'
+        : '<button class="btn-action btn-gray" onclick="ddpToggleEdit()">✏️ แก้ไข</button><button class="btn-action" style="background:#fed7d7;color:#c53030;border:none" onclick="ddpDeleteDay()">🗑 ลบทั้งวัน</button>'
+    }</div>
+  </div>
+  <div class="ddp-search-wrap">
+    <input class="ddp-search" id="ddp-search-input" type="text" placeholder="🔍 ค้นหาชื่อ..." value="${escHtml(_ddpSearch)}"
+      oninput="_ddpSearch=this.value;_ddpRenderTable()" autocomplete="off">
+    <span class="ddp-search-count" id="ddp-search-count">${sq ? `พบ ${totalFiltered} คน` : `ทั้งหมด ${_ddpOrder.length} คน`}</span>
+    ${sq ? `<button id="ddp-search-clear" onclick="_ddpSearch='';document.getElementById('ddp-search-input').value='';_ddpRenderTable()" style="font-size:11px;padding:3px 8px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;color:#718096">✕ ล้าง</button>` : '<span id="ddp-search-clear"></span>'}
+  </div>
+  <div style="overflow-x:auto"><table class="ddp-table" id="ddp-tbl">
+    <thead><tr>
+      ${_ddpEditing ? '<th style="width:20px"></th>' : ''}
+      <th class="th-left" style="min-width:80px">Nick</th>
+      <th class="th-left" style="min-width:90px">ชื่อจริง</th>
+      <th class="th-left">Co.</th>
+      <th>LS</th><th>AS</th><th>SK</th><th>LP</th><th>OS</th>
+      <th>OT</th><th>R</th><th>S</th>
+      <th style="color:#f6ad55;min-width:52px">Level฿</th>
+      <th style="color:#f6ad55;min-width:44px">Tip</th>
+      <th style="background:#0d2d1a;color:white;min-width:52px">Total</th>
+      <th class="th-left" style="min-width:80px">Note</th>
+      <th style="width:28px"></th>
+    </tr></thead><tbody id="ddp-tbody">`;
+
+  // grand total accumulators
+  let gLS=0,gAS=0,gSK=0,gLP=0,gOS=0,gOT=0,gR=0,gS=0,gLv=0,gTip=0;
+
+  for (const co of COMPANIES) {
+    const entries = byCompany[co];
+    if (!entries.length) continue;
+    const coKey   = CO_KEY[co] || 'unknown';
+    const coLabel = { Sinsub:'SINSUB', Sukjai:'SUKJAI', Happines:'HAPPINES', '?':'ไม่ทราบ' }[co];
+    const colSpan = _ddpEditing ? 18 : 17;
+    html += `<tr><td colspan="${colSpan}" class="co-hdr-${coKey}" style="color:white;font-size:11px;font-weight:700;padding:4px 8px">${coLabel}</td></tr>`;
+
+    let sLS=0,sAS=0,sSK=0,sLP=0,sOS=0,sOT=0,sR=0,sS=0,sLv=0,sTip=0;
+
+    for (const { mi, pos } of entries) {
+      const r   = masterRecords[mi];
+      const ed  = _ddpEdits[mi] || {};
+      const v   = f => (f in ed ? ed[f] : (r[f] || 0));
+      const tot = FIELDS.reduce((s,f) => s + v(f), 0);
+      const osTag = r.isOsLevel
+        ? '<span style="font-size:9px;background:#fed7d7;color:#c53030;border-radius:3px;padding:1px 3px;margin-left:2px">OS</span>' : '';
+
+      sLS+=v('LS'); sAS+=v('AS'); sSK+=v('SK'); sLP+=v('LP'); sOS+=v('OS');
+      sOT+=v('OT'); sR+=v('R'); sS+=v('S'); sLv+=v('Level'); sTip+=v('Tip');
+
+      if (_ddpEditing) {
+        html += `<tr class="ddp-edit" data-pos="${pos}" data-mi="${mi}" draggable="true">
+          <td style="cursor:grab;text-align:center;color:#a0aec0;font-size:16px;user-select:none">⠿</td>
+          <td><strong>${escHtml(r.nick)}</strong>${osTag}</td>
+          <td style="font-size:11px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+          <td style="font-size:10px;color:#718096">${r.company||'?'}</td>
+          ${FIELDS.map(f => `<td class="num"><input class="cell-sm" type="number" min="0" step="50"
+            value="${v(f)||''}" data-mi="${mi}" data-field="${f}" oninput="ddpInput(this)"></td>`).join('')}
+          <td class="num" id="ddp-tot-${mi}" style="font-weight:700;background:#0d2d1a;color:white">${numFmt(tot)}</td>
+          <td><input class="cell-sm" style="width:80px;text-align:left"
+            type="text" value="${escHtml(r.note||'')}" data-mi="${mi}" data-field="note" oninput="ddpInput(this)"></td>
+          <td><button onclick="ddpDeleteRow(${mi})"
+            style="background:none;border:none;color:#fc8181;cursor:pointer;font-size:14px" title="ลบ">🗑</button></td>
+        </tr>`;
+      } else {
+        const fmt = f => v(f) ? `<span style="color:#2d3748">${numFmt(v(f))}</span>` : `<span style="color:#e2e8f0">—</span>`;
+        html += `<tr class="co-${coKey}">
+          <td style="text-align:left;padding:5px 8px"><strong>${escHtml(r.nick)}</strong>${osTag}</td>
+          <td style="font-size:11px;color:#4a5568;text-align:left;padding:5px 8px">${escHtml(r.fullName||r.nick)}</td>
+          <td style="font-size:10px;color:#718096">${r.company||'?'}</td>
+          ${FIELDS.map(f => `<td class="num">${fmt(f)}</td>`).join('')}
+          <td class="num" style="font-weight:700;background:#0d2d1a;color:white">${numFmt(tot)}</td>
+          <td style="font-size:11px;color:#718096;text-align:left;padding:5px 8px">${escHtml(r.note||'')}</td>
+          <td></td>
+        </tr>`;
+      }
+    }
+
+    // subtotal per company
+    const sTot = sLS+sAS+sSK+sLP+sOS+sOT+sR+sS+sLv+sTip;
+    const span1 = _ddpEditing ? 4 : 3;
+    html += `<tr style="background:#f0faf4;font-size:11px;font-weight:700">
+      <td colspan="${span1}" style="padding:4px 8px;text-align:left">รวม ${entries.length} คน</td>
+      <td class="num">${numFmt(sLS)}</td><td class="num">${numFmt(sAS)}</td>
+      <td class="num">${numFmt(sSK)}</td><td class="num">${numFmt(sLP)}</td>
+      <td class="num">${numFmt(sOS)}</td><td class="num">${numFmt(sOT)}</td>
+      <td class="num">${numFmt(sR)}</td><td class="num">${numFmt(sS)}</td>
+      <td class="num">${numFmt(sLv)}</td><td class="num">${numFmt(sTip)}</td>
+      <td class="num" style="background:#0d2d1a;color:white">${numFmt(sTot)}</td>
+      <td colspan="2"></td>
+    </tr>`;
+
+    // Exclude unknown employees ('?') from grand total
+    if (co !== '?') {
+      gLS+=sLS; gAS+=sAS; gSK+=sSK; gLP+=sLP; gOS+=sOS;
+      gOT+=sOT; gR+=sR; gS+=sS; gLv+=sLv; gTip+=sTip;
+    }
+  }
+
+  // grand total
+  const gTot = gLS+gAS+gSK+gLP+gOS+gOT+gR+gS+gLv+gTip;
+  const span2 = _ddpEditing ? 4 : 3;
+  html += `<tr class="total-row">
+    <td colspan="${span2}" style="padding:5px 8px;text-align:left">ยอดรวมทั้งหมด</td>
+    <td class="num">${numFmt(gLS)}</td><td class="num">${numFmt(gAS)}</td>
+    <td class="num">${numFmt(gSK)}</td><td class="num">${numFmt(gLP)}</td>
+    <td class="num">${numFmt(gOS)}</td><td class="num">${numFmt(gOT)}</td>
+    <td class="num">${numFmt(gR)}</td><td class="num">${numFmt(gS)}</td>
+    <td class="num">${numFmt(gLv)}</td><td class="num">${numFmt(gTip)}</td>
+    <td class="num" style="font-size:13px;background:#0d2d1a;color:white">฿${gTot.toLocaleString()}</td>
+    <td colspan="2"></td>
+  </tr>`;
+
+  html += '</tbody></table></div></div>';
+
+  // Surgical update only when user is actively typing in the search box
+  // (preserves input focus). For all other cases (date switch, clear, edit mode)
+  // do a full replace so branch tables always render correctly.
+  const existingSearch = document.getElementById('ddp-search-input');
+  if (existingSearch && sq) {
+    // 1. Update count label
+    const countEl = document.getElementById('ddp-search-count');
+    if (countEl) countEl.textContent = `พบ ${totalFiltered} คน`;
+    // 2. Update clear button
+    const clearEl = document.getElementById('ddp-search-clear');
+    if (clearEl) {
+      clearEl.outerHTML = `<button id="ddp-search-clear" onclick="_ddpSearch='';document.getElementById('ddp-search-input').value='';_ddpRenderTable()" style="font-size:11px;padding:3px 8px;border:1px solid #cbd5e0;border-radius:6px;background:white;cursor:pointer;color:#718096">✕ ล้าง</button>`;
+    }
+    // 3. Replace only tbody — never touch the input so focus is preserved
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const newTbody = tmp.querySelector('#ddp-tbody');
+    const oldTbody = document.getElementById('ddp-tbody');
+    if (newTbody && oldTbody) oldTbody.replaceWith(newTbody.cloneNode(true));
+  } else {
+    // Full replace — covers: first open, date switch, search cleared, edit mode toggle
+    body.innerHTML = html;
+    // Only restore focus to search input if user was actively searching
+    // (unconditional focus causes browser to scroll down to the search box)
+    if (_ddpSearch) {
+      const newInput = document.getElementById('ddp-search-input');
+      if (newInput) newInput.focus();
+    }
+  }
+
+  // เปิด drag ถ้าอยู่ใน edit mode
+  if (_ddpEditing) _ddpInitDrag();
+}
+
+// Alias — called from search input to avoid full re-render
+function _ddpRenderTable() { _ddpRender(); }
+
+// ── Branch Detail Tables (แสดงก่อนตารางรวม) ─────────────
+function _ddpRenderBranchTables(iso) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const BR_LABEL = {LS:'Langsuan : LS', AS:'Asoke : AS', SK:'Sukhumvit : SK', LP:'Lumpini : LP', OS:'Onsen : OS'};
+  // Ensure edit state maps exist
+  for (const b of BRANCHES) { if (!_bdtEdits[b])   _bdtEdits[b]   = {}; }
+  for (const b of BRANCHES) { if (!(_bdtEditing[b])) _bdtEditing[b] = false; }
+
+  // ดึง masterRecords ของวันนี้
+  const allDayRecs = masterRecords.filter(r =>
+    (r.date||'').split(',').map(s=>s.trim()).includes(iso)
+  );
+  if (!allDayRecs.length) return '';
+  // Only known employees (company !== '?') are included in branch tables and totals
+  const dayRecs = allDayRecs.filter(r => (r.company||'?') !== '?');
+  const unknownRecs = allDayRecs.filter(r => (r.company||'?') === '?');
+
+  const fmt0 = v => v ? v.toLocaleString() : '<span style="color:#e2e8f0">—</span>';
+  const fmt  = v => v ? v.toLocaleString() : '';
+
+  let html = `<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
+    <span style="font-size:13px;font-weight:700;color:#2d3748">📊 สรุปแยกสาขา</span>
+    <button class="bdt-toggle-btn" onclick="_bdtToggleAll(this)">▼ ซ่อนทั้งหมด</button>
+  </div>`;
+
+  // ──────────────────────────────────────────────────────
+  // Determine each person's "primary branch" = the branch
+  // where r[br] is largest. Used as fallback for legacy
+  // records that have no per-branch OT/R/S breakdown.
+  // ──────────────────────────────────────────────────────
+  function primaryBranch(r) {
+    let best = null, bestVal = 0;
+    for (const b of BRANCHES) {
+      if ((r[b]||0) > bestVal) { bestVal = r[b]||0; best = b; }
+    }
+    // OS-level staff always have commission=0 in every branch, so they'd never
+    // match a branch above and their OT/R/S would vanish from the breakdown
+    // (while still counting in the grand total). Default them to Onsen (OS).
+    if (best === null && r.isOsLevel) return 'OS';
+    return best; // null if all zero (OT-only record, non-OS-level)
+  }
+
+  // Check whether this record has ANY per-branch OT/R/S stored
+  function hasPerBranchOTRS(r) {
+    return BRANCHES.some(b =>
+      (r['OT_'+b]||0) > 0 || (r['R_'+b]||0) > 0 || (r['S_'+b]||0) > 0
+    );
+  }
+
+  let grandCom=0, grandOT=0, grandR=0, grandS=0, grandLvl=0, grandTip=0;
+
+  for (const br of BRANCHES) {
+    // Include a record in this branch section if:
+    //   a) it has commission in this branch (r[br] > 0), OR
+    //   b) it has per-branch OT/R/S for this branch, OR
+    //   c) legacy record: no per-branch OT/R/S stored at all,
+    //      but this IS the person's primary branch → show r.OT/R/S here
+    const brRecs = dayRecs.filter(r => {
+      if ((r[br]||0) > 0) return true;
+      if ((r['OT_'+br]||0) > 0 || (r['R_'+br]||0) > 0 || (r['S_'+br]||0) > 0) return true;
+      if ((r['Level_'+br]||0) > 0) return true;   // per-branch Level฿
+      // legacy fallback: assign OT/R/S to primary branch
+      if (!hasPerBranchOTRS(r) && primaryBranch(r) === br &&
+          ((r.OT||0) > 0 || (r.R||0) > 0 || (r.S||0) > 0)) return true;
+      return false;
+    });
+    if (!brRecs.length) continue;
+
+    let sCom=0, sOT=0, sR=0, sS=0, sLvl=0, sTip=0;
+    let rowsHtml = '';
+
+    brRecs.forEach((r, idx) => {
+      const com = r[br] || 0;
+      // Per-branch OT/R/S if available, else fallback to total (legacy)
+      const legacy = !hasPerBranchOTRS(r) && primaryBranch(r) === br;
+      const ot  = legacy ? (r.OT||0)  : (r['OT_'+br]||0);
+      const req = legacy ? (r.R||0)   : (r['R_'+br]||0);
+      const sup = legacy ? (r.S||0)   : (r['S_'+br]||0);
+      const isLtBr = _levelTipBranch(r) === br;   // Tip counted once, in main branch only
+      const lvl = levelBranchBaht(r, br);          // Level฿ from THIS branch's hours
+      const tip = isLtBr ? (r.Tip   || 0) : 0;
+      const tot = com + ot + req + sup + lvl + tip;
+      sCom+=com; sOT+=ot; sR+=req; sS+=sup; sLvl+=lvl; sTip+=tip;
+      rowsHtml += `<tr>
+        <td style="text-align:center;color:#a0aec0">${idx+1}</td>
+        <td style="font-size:10px;color:#718096">${escHtml(r.company||'?')}</td>
+        <td style="font-size:10px;color:#718096">${escHtml(r.level||'')}</td>
+        <td class="th-left"><strong>${escHtml(r.nick)}</strong></td>
+        <td style="font-size:10px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+        <td class="num">${fmt0(com)}</td>
+        <td class="num" style="color:#b7791f">${fmt0(lvl)}</td>
+        <td class="num" style="color:#276749">${fmt0(ot)}</td>
+        <td class="num" style="color:#2b4c8c">${fmt0(req)}</td>
+        <td class="num" style="color:#744210">${fmt0(sup)}</td>
+        <td class="num" style="color:#97266d">${fmt0(tip)}</td>
+        <td class="num" style="font-weight:700">${tot.toLocaleString()}</td>
+      </tr>`;
+    });
+
+    const sTot = sCom + sOT + sR + sS + sLvl + sTip;
+    grandCom+=sCom; grandOT+=sOT; grandR+=sR; grandS+=sS; grandLvl+=sLvl; grandTip+=sTip;
+
+    const isEditing = _bdtEditing[br] || false;
+    const editBtnLabel  = isEditing ? '💾 บันทึก' : '✏️ แก้ไข';
+    const editBtnStyle  = isEditing
+      ? 'background:#276749;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;margin-left:6px'
+      : 'background:rgba(255,255,255,0.25);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:6px';
+    const cancelBtnHtml = isEditing
+      ? `<button style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:4px"
+           onclick="_bdtCancelEdit('${br}')">✕</button>
+         <button style="background:rgba(72,187,120,0.35);color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;margin-left:6px"
+           onclick="_bdtAddRow('${br}')">➕ เพิ่มแถว</button>`
+      : '';
+
+    // Build rows with edit inputs if in edit mode
+    let rowsHtmlFinal = '';
+    brRecs.forEach((r, idx) => {
+      const mi  = masterRecords.indexOf(r);
+      const ed  = (_bdtEdits[br]||{})[mi] || {};
+      const vf  = (field, fallback) => (field in ed) ? ed[field] : fallback;
+
+      const com = vf('_br_com',  r[br]       || 0);
+      const legacy2 = !hasPerBranchOTRS(r) && primaryBranch(r) === br;
+      const ot  = vf('_br_ot',  legacy2 ? (r.OT||0) : (r['OT_'+br]||0));
+      const req = vf('_br_r',   legacy2 ? (r.R||0)  : (r['R_'+br]||0));
+      const sup = vf('_br_s',   legacy2 ? (r.S||0)  : (r['S_'+br]||0));
+      const isLtBr2 = _levelTipBranch(r) === br;  // Tip belongs to main branch only
+      const lvl = levelBranchBaht(r, br);          // Level฿ per branch (auto, read-only)
+      const tip = isLtBr2 ? vf('Tip',   r.Tip   || 0) : 0;
+      const tot = com + ot + req + sup + lvl + tip;
+
+      if (isEditing) {
+        const inp = (field, val) =>
+          `<input type="number" min="0" step="50" value="${val||''}"
+            style="width:60px;padding:2px 4px;font-size:11px;border:1px solid #68d391;border-radius:4px;text-align:right"
+            oninput="_bdtInput(this,'${br}',${mi},'${field}')" onblur="_bdtInput(this,'${br}',${mi},'${field}')">`;
+        const otherBranches = BRANCHES.filter(b => b !== br);
+        const moveOpts = otherBranches.map(b =>
+          `<option value="${b}">${b}</option>`).join('');
+        rowsHtmlFinal += `<tr style="background:#f0fff4">
+          <td style="text-align:center;color:#a0aec0">${idx+1}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.company||'?')}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.level||'')}</td>
+          <td class="th-left"><strong>${escHtml(r.nick)}</strong></td>
+          <td style="font-size:10px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+          <td style="padding:2px 4px">
+            <select style="font-size:11px;border:1px solid #fc8181;border-radius:4px;padding:2px 4px;color:#c53030;background:#fff5f5"
+              onchange="_bdtMoveRow(${mi},'${br}',this.value)">
+              <option value="">— ย้ายไป —</option>
+              ${moveOpts}
+            </select>
+          </td>
+          <td class="num">${inp('_br_com', com)}</td>
+          <td class="num">${inp('_br_lvl', lvl)}</td>
+          <td class="num">${inp('_br_ot',  ot)}</td>
+          <td class="num">${inp('_br_r',   req)}</td>
+          <td class="num">${inp('_br_s',   sup)}</td>
+          <td class="num">${isLtBr2 ? inp('Tip', tip) : '<span style="color:#cbd5e0" title="แก้ไขได้ในสาขาหลักของพนักงาน">—</span>'}</td>
+          <td class="num" style="font-weight:700" id="bdt-tot-${br}-${mi}">${tot.toLocaleString()}</td>
+        </tr>`;
+      } else {
+        rowsHtmlFinal += `<tr>
+          <td style="text-align:center;color:#a0aec0">${idx+1}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.company||'?')}</td>
+          <td style="font-size:10px;color:#718096">${escHtml(r.level||'')}</td>
+          <td class="th-left"><strong>${escHtml(r.nick)}</strong></td>
+          <td style="font-size:10px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+          <td class="num">${fmt0(com)}</td>
+          <td class="num" style="color:#b7791f">${fmt0(lvl)}</td>
+          <td class="num" style="color:#276749">${fmt0(ot)}</td>
+          <td class="num" style="color:#2b4c8c">${fmt0(req)}</td>
+          <td class="num" style="color:#744210">${fmt0(sup)}</td>
+          <td class="num" style="color:#97266d">${fmt0(tip)}</td>
+          <td class="num" style="font-weight:700">${tot.toLocaleString()}</td>
+        </tr>`;
+      }
+    });
+
+    // Build new row inputs for this branch (only in edit mode)
+    const pendingNewRows = (_bdtNewRows[br] || []);
+    let newRowsHtml = '';
+    if (isEditing && pendingNewRows.length > 0) {
+      const nickOpts = ['', ...Object.keys(NICK_INFO).sort()]
+        .map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+      const inp2 = (field, val, brr, i) =>
+        `<input type="number" min="0" step="50" value="${val||''}"
+          style="width:58px;padding:2px 4px;font-size:11px;border:1px solid #68d391;border-radius:4px;text-align:right"
+          oninput="_bdtNewRowInput('${brr}',${i},'${field}',this.value)">`;
+      newRowsHtml = pendingNewRows.map((row, i) => `
+        <tr style="background:#fffff0;border-top:2px solid #68d391">
+          <td style="text-align:center;color:#276749;font-weight:700">+</td>
+          <td colspan="2" style="padding:2px 4px">
+            <select style="font-size:11px;border:1px solid #68d391;border-radius:4px;padding:2px 4px;max-width:90px"
+              onchange="_bdtSelectNick('${br}',${i},this)">
+              ${nickOpts}
+            </select>
+          </td>
+          <td colspan="2" style="padding:2px 4px">
+            <input type="text" id="bdt-new-nick-txt-${br}-${i}"
+              placeholder="Nick (พิมพ์เอง)"
+              value="${escHtml(row.nick)}"
+              style="width:110px;padding:2px 6px;font-size:11px;border:1px solid #68d391;border-radius:4px"
+              oninput="_bdtNewRowInput('${br}',${i},'nick',this.value)">
+          </td>
+          <td style="padding:2px 4px;font-size:11px;color:#a0aec0;text-align:center">—</td>
+          <td class="num">${inp2('com', row.com, br, i)}</td>
+          <td class="num">${inp2('lvl', row.lvl, br, i)}</td>
+          <td class="num">${inp2('ot',  row.ot,  br, i)}</td>
+          <td class="num">${inp2('r',   row.r,   br, i)}</td>
+          <td class="num">${inp2('s',   row.s,   br, i)}</td>
+          <td class="num">${inp2('tip', row.tip, br, i)}</td>
+          <td class="num">
+            <button onclick="_bdtRemoveNewRow('${br}',${i})"
+              style="background:#fed7d7;color:#c53030;border:none;border-radius:4px;padding:1px 7px;font-size:12px;cursor:pointer">✕</button>
+          </td>
+        </tr>`).join('');
+      // Add a footer note for the new rows section
+      newRowsHtml += `<tr style="background:#f0fff4">
+        <td colspan="13" style="padding:4px 10px;font-size:11px;color:#276749">
+          ⬆️ ${pendingNewRows.length} แถวใหม่รอบันทึก — กด 💾 บันทึก เพื่อยืนยัน
+        </td>
+      </tr>`;
+    }
+
+    html += `<div class="bdt-section" id="bdt-section-${br}">
+      <div style="display:flex;align-items:center">
+        <div class="bdt-title bdt-title-${br}">${BR_LABEL[br]}</div>
+        <button class="bdt-toggle-btn" onclick="_bdtToggle(this)" style="color:#fff;background:rgba(255,255,255,0.2);margin-left:6px">▼</button>
+        <button style="${editBtnStyle}" onclick="_bdtToggleEdit('${br}')">${editBtnLabel}</button>
+        ${cancelBtnHtml}
+      </div>
+      <div class="bdt-wrap open" style="overflow-x:auto">
+      <table class="bdt-tbl">
+        <thead><tr>
+          <th style="width:28px">No</th>
+          <th class="th-left" style="min-width:70px">Company</th>
+          <th class="th-left" style="min-width:55px">Level</th>
+          <th class="th-left" style="min-width:55px">Nick</th>
+          <th class="th-left" style="min-width:130px">Name</th>
+          ${isEditing ? '<th style="min-width:90px;color:#e53e3e">ย้ายสาขา</th>' : ''}
+          <th style="color:#276749">Com</th>
+          <th style="color:#b7791f">Level฿</th>
+          <th style="color:#276749">OT</th>
+          <th style="color:#2b4c8c">R</th>
+          <th style="color:#744210">S</th>
+          <th style="color:#97266d">Tip</th>
+          <th style="background:#1a202c;color:#fff">Total</th>
+        </tr></thead>
+        <tbody>${rowsHtmlFinal}${newRowsHtml}</tbody>
+        <tfoot>
+          <tr class="sub-row">
+            <td colspan="${isEditing ? 6 : 5}" style="padding:4px 8px">รวม ${brRecs.length} คน</td>
+            <td class="num">${fmt(sCom)}</td>
+            <td class="num">${fmt(sLvl)}</td>
+            <td class="num">${fmt(sOT)}</td>
+            <td class="num">${fmt(sR)}</td>
+            <td class="num">${fmt(sS)}</td>
+            <td class="num">${fmt(sTip)}</td>
+            <td class="num">${sTot.toLocaleString()}</td>
+          </tr>
+          <tr class="grand-row">
+            <td colspan="${isEditing ? 12 : 11}" style="text-align:right;padding:5px 10px">ยอดรวม ${BR_LABEL[br]}</td>
+            <td class="num">฿${sTot.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+    </div>`;
+  }
+
+  // ── Grand total: sum directly from dayRecs (authoritative) ──────────────
+  // Use per-branch fields if present; fall back to totals for legacy records.
+  // This avoids under-counting when records only have r.OT (no r['OT_LS']).
+  let gCom=0, gOT=0, gR=0, gS=0, gLvl=0, gTip=0;
+  for (const r of dayRecs) {
+    gCom += BRANCHES.reduce((s,b) => s+(r[b]||0), 0);
+    gOT  += r.OT    || 0;
+    gR   += r.R     || 0;
+    gS   += r.S     || 0;
+    gLvl += r.Level || 0;
+    gTip += r.Tip   || 0;
+  }
+  const gTot = gCom + gOT + gR + gS + gLvl + gTip;
+  html += `<div style="background:#fefcbf;border:2px solid #b7791f;border-radius:8px;padding:10px 16px;
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:13px;font-weight:700;color:#1a202c">ยอดรวมทั้งหมด (ทุกสาขา)</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px">
+      ${gCom  ? `<span>Com <strong>${fmt(gCom)}</strong></span>` : ''}
+      ${gLvl  ? `<span style="color:#b7791f">Level฿ <strong>${fmt(gLvl)}</strong></span>` : ''}
+      ${gOT   ? `<span style="color:#276749">OT <strong>${fmt(gOT)}</strong></span>` : ''}
+      ${gR    ? `<span style="color:#2b4c8c">R <strong>${fmt(gR)}</strong></span>` : ''}
+      ${gS    ? `<span style="color:#744210">S <strong>${fmt(gS)}</strong></span>` : ''}
+      ${gTip  ? `<span style="color:#97266d">Tip <strong>${fmt(gTip)}</strong></span>` : ''}
+      <span style="font-size:14px;font-weight:800;color:#1a202c">= ฿${gTot.toLocaleString()}</span>
+    </div>
+  </div>`;
+
+  // ── Unknown employees (not in employee list) ──────────────
+  if (unknownRecs.length) {
+    const uTotal = unknownRecs.reduce((s,r) => s+(r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0)+(r.OT||0)+(r.R||0)+(r.S||0), 0);
+    html += `<div style="background:#fff5f5;border:2px solid #fc8181;border-radius:8px;padding:10px 16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#c53030;margin-bottom:8px">⚠️ พนักงานที่ไม่พบในระบบ (${unknownRecs.length} คน) — ไม่รวมในยอดรวม</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#fff5f5;color:#718096">
+          <th style="text-align:left;padding:4px 8px">Nick</th>
+          <th style="text-align:left;padding:4px 8px">ชื่อจริง</th>
+          <th style="text-align:right;padding:4px 8px">Com รวม</th>
+        </tr></thead>
+        <tbody>
+          ${unknownRecs.map(r => {
+            const com = (r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0);
+            return `<tr style="border-top:1px solid #fed7d7">
+              <td style="padding:3px 8px;font-weight:700;color:#c53030">${escHtml(r.nick)}</td>
+              <td style="padding:3px 8px;color:#4a5568">${escHtml(r.fullName||r.nick)}</td>
+              <td style="padding:3px 8px;text-align:right">${com ? com.toLocaleString() : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  return html;
+}
+
+function _bdtToggle(btn) {
+  const wrap = btn.closest('.bdt-section').querySelector('.bdt-wrap');
+  if (!wrap) return;
+  const open = wrap.classList.toggle('open');
+  btn.textContent = open ? '▼' : '▶';
+}
+function _bdtToggleAll(btn) {
+  const container = btn.closest('div').nextElementSibling;
+  if (!container) return;
+  // ดูว่าตอนนี้เปิดอยู่ไหม
+  const anyOpen = document.querySelectorAll('.bdt-wrap.open').length > 0;
+  document.querySelectorAll('.bdt-wrap').forEach(w => {
+    w.classList.toggle('open', !anyOpen);
+  });
+  document.querySelectorAll('.bdt-section .bdt-toggle-btn').forEach(b => {
+    b.textContent = anyOpen ? '▶' : '▼';
+  });
+  btn.textContent = anyOpen ? '▼ แสดงทั้งหมด' : '▼ ซ่อนทั้งหมด';
+}
+
+// ── Branch table edit helpers ────────────────────────
+// Toggle edit mode for one branch
+function _bdtToggleEdit(br) {
+  if (_bdtEditing[br]) {
+    // Currently editing → Save
+    _bdtSave(br);
+  } else {
+    // Enter edit mode
+    _bdtEditing[br] = true;
+    _bdtEdits[br]   = {};
+    _bdtNewRows[br] = [];
+    _ddpRender();
+  }
+}
+
+// Cancel edit for one branch
+function _bdtCancelEdit(br) {
+  _bdtEditing[br] = false;
+  _bdtEdits[br]   = {};
+  _bdtNewRows[br] = [];
+  _ddpRender();
+}
+
+// Move a row from one branch to another
+function _bdtMoveRow(mi, fromBr, toBr) {
+  if (!toBr || toBr === fromBr) return;
+  const r = masterRecords[mi];
+  if (!r) return;
+  const BLIST = ['LS','AS','SK','LP','OS'];
+
+  // Legacy records store only totals — seed per-branch first so the move
+  // doesn't wipe OT/R/S when totals are recalculated below (fixed 2026-06-12)
+  _seedLegacyPerBranch(r);
+
+  // Move commission and OT/R/S values from source to target branch
+  r[toBr]          = (r[toBr]||0)          + (r[fromBr]||0);
+  r['OT_'+toBr]    = (r['OT_'+toBr]||0)    + (r['OT_'+fromBr]||0);
+  r['R_'+toBr]     = (r['R_'+toBr]||0)     + (r['R_'+fromBr]||0);
+  r['S_'+toBr]     = (r['S_'+toBr]||0)     + (r['S_'+fromBr]||0);
+  r['mins_'+toBr]  = (r['mins_'+toBr]||0)  + (r['mins_'+fromBr]||0);
+  r['Level_'+toBr] = (r['Level_'+toBr]||0) + (r['Level_'+fromBr]||0);
+
+  // Clear source branch
+  r[fromBr]        = 0;
+  r['OT_'+fromBr]  = 0;
+  r['R_'+fromBr]   = 0;
+  r['S_'+fromBr]   = 0;
+  r['mins_'+fromBr]  = 0;
+  r['Level_'+fromBr] = 0;
+
+  // Recalculate totals
+  r.OT = BLIST.reduce((s,b) => s+(r['OT_'+b]||0), 0);
+  r.R  = BLIST.reduce((s,b) => s+(r['R_'+b]||0),  0);
+  r.S  = BLIST.reduce((s,b) => s+(r['S_'+b]||0),  0);
+  r.mins  = BLIST.reduce((s,b) => s+(r['mins_'+b]||0), 0);
+  r.Level = BLIST.reduce((s,b) => s+(r['Level_'+b]||0), 0);
+
+  // Exit edit mode for this branch and re-render
+  _bdtEditing[fromBr] = false;
+  _bdtEdits[fromBr]   = {};
+  msSaveLocal(true); // skipRefresh — _ddpRender() below handles UI update
+  msDirty = true;
+  _ddpRender();
+  showStatus('success', `✅ ย้าย ${r.nick} จาก ${fromBr} → ${toBr} แล้ว`);
+  ghSilentPushIfConfigured();
+}
+
+// Live input handler for branch table cells
+function _bdtInput(el, br, mi, field) {
+  const val = Math.max(0, +el.value || 0);
+  el.value = val; // clamp display value too
+  if (!_bdtEdits[br])    _bdtEdits[br]    = {};
+  if (!_bdtEdits[br][mi]) _bdtEdits[br][mi] = {};
+  _bdtEdits[br][mi][field] = val;
+
+  // Update row total live
+  const r   = masterRecords[mi];
+  const ed  = _bdtEdits[br][mi];
+  const legacy = !_hasPerBranchOTRS(r) && _primaryBranchOf(r) === br;
+
+  const com = ('_br_com' in ed) ? ed._br_com : (r[br]||0);
+  const ot  = ('_br_ot'  in ed) ? ed._br_ot  : (legacy?(r.OT||0):(r['OT_'+br]||0));
+  const req = ('_br_r'   in ed) ? ed._br_r   : (legacy?(r.R||0) :(r['R_'+br]||0));
+  const sup = ('_br_s'   in ed) ? ed._br_s   : (legacy?(r.S||0) :(r['S_'+br]||0));
+  const isLtBr = _levelTipBranch(r) === br;
+  const lvl = ('_br_lvl' in ed) ? ed._br_lvl : levelBranchBaht(r, br);
+  const tip = ('Tip'     in ed) ? ed.Tip     : (isLtBr ? (r.Tip||0)   : 0);
+  const totEl = document.getElementById(`bdt-tot-${br}-${mi}`);
+  if (totEl) totEl.textContent = (com+ot+req+sup+lvl+tip).toLocaleString();
+}
+
+// Save branch edits back to masterRecords
+function _bdtSave(br) {
+  const BRANCHES = ['LS','AS','SK','LP','OS'];
+  const edMap = _bdtEdits[br] || {};
+  for (const [miStr, changes] of Object.entries(edMap)) {
+    const mi = parseInt(miStr);
+    const r  = masterRecords[mi];
+    if (!r) continue;
+
+    // Legacy records store only totals — seed per-branch values FIRST, otherwise
+    // the unconditional recalc below wipes r.OT/R/S to 0 (e.g. when editing only
+    // Level or Tip on a legacy row). Fixed 2026-06-12.
+    _seedLegacyPerBranch(r);
+
+    // Update branch commission
+    if ('_br_com' in changes) r[br] = changes._br_com;
+
+    // Update per-branch OT/R/S
+    if ('_br_ot' in changes) r['OT_'+br] = changes._br_ot;
+    if ('_br_r'  in changes) r['R_'+br]  = changes._br_r;
+    if ('_br_s'  in changes) r['S_'+br]  = changes._br_s;
+
+    // Recalculate totals r.OT / r.R / r.S from per-branch sums
+    r.OT = BRANCHES.reduce((s,b) => s+(r['OT_'+b]||0), 0);
+    r.R  = BRANCHES.reduce((s,b) => s+(r['R_'+b] ||0), 0);
+    r.S  = BRANCHES.reduce((s,b) => s+(r['S_'+b] ||0), 0);
+
+    // Level per-branch (manual override) and Tip
+    if ('_br_lvl' in changes) r['Level_'+br] = changes._br_lvl;
+    // Recalculate total Level฿ from all per-branch values
+    r.Level = BRANCHES.reduce((s,b) => s+(r['Level_'+b]||0), 0);
+    if ('Level' in changes) { r.Level = changes.Level; }  // summary-table override (legacy)
+    if ('Tip'   in changes) r.Tip   = changes.Tip;
+  }
+
+  // Save new rows
+  const newRows = _bdtNewRows[br] || [];
+  let addedCount = 0;
+  for (const row of newRows) {
+    const nick = (row.nick || '').trim();
+    if (!nick) continue; // skip blank rows
+    const info = NICK_INFO[nick] || {};
+    const BLIST2 = ['LS','AS','SK','LP','OS'];
+    const newRec = {
+      id: genId(),
+      date: _ddpIso,
+      nick,
+      fullName: nick,
+      company: info.company || '?',
+      level:   info.level   || '?',
+      LS:0, AS:0, SK:0, LP:0, OS:0,
+      OT:row.ot, R:row.r, S:row.s,
+      Level: row.lvl, Tip: row.tip,
+      isOsLevel: isOsLevelNick(nick),
+      note: '', source: 'manual'
+    };
+    // Set commission and per-branch fields for this branch
+    newRec[br] = row.com;
+    for (const b of BLIST2) { newRec['OT_'+b]=0; newRec['R_'+b]=0; newRec['S_'+b]=0; newRec['mins_'+b]=0; newRec['Level_'+b]=0; }
+    newRec['OT_'+br] = row.ot;
+    newRec['R_'+br]  = row.r;
+    newRec['S_'+br]  = row.s;
+    newRec['Level_'+br] = row.lvl || 0;   // manual Level฿ lives in this branch only
+    masterRecords.push(newRec);
+    addedCount++;
+  }
+
+  msSaveLocal(true); // skipRefresh — _ddpRender() below updates UI
+  msDirty          = true;
+  _bdtEditing[br]  = false;
+  _bdtEdits[br]    = {};
+  _bdtNewRows[br]  = [];
+  _ddpOrder = _ddpGetIndices(_ddpIso); // refresh after new rows added
+  _ddpRender();
+  const msg = addedCount > 0
+    ? `✅ บันทึกแก้ไข ${BR_LABEL_MAP[br]} แล้ว (เพิ่ม ${addedCount} แถวใหม่)`
+    : `✅ บันทึกแก้ไข ${BR_LABEL_MAP[br]} แล้ว`;
+  showStatus('success', msg);
+  ghSilentPushIfConfigured();
+}
+
+// ── Add a new blank row to a branch ─────────────────────────────────────────
+function _bdtAddRow(br) {
+  if (!_bdtNewRows[br]) _bdtNewRows[br] = [];
+  _bdtNewRows[br].push({ nick:'', com:0, ot:0, r:0, s:0, lvl:0, tip:0 });
+  _ddpRender();
+}
+
+// ── Remove a pending new row ──────────────────────────────────────────────────
+function _bdtRemoveNewRow(br, idx) {
+  if (!_bdtNewRows[br]) return;
+  _bdtNewRows[br].splice(idx, 1);
+  _ddpRender();
+}
+
+// ── Live input handler for new row fields ────────────────────────────────────
+function _bdtNewRowInput(br, idx, field, val) {
+  if (!_bdtNewRows[br] || !_bdtNewRows[br][idx]) return;
+  _bdtNewRows[br][idx][field] = (field === 'nick') ? val : Math.max(0, +val || 0);
+}
+
+// ── Handle employee dropdown selection → auto-fill nick ──────────────────────
+function _bdtSelectNick(br, idx, sel) {
+  const nick = sel.value;
+  if (!_bdtNewRows[br] || !_bdtNewRows[br][idx]) return;
+  _bdtNewRows[br][idx].nick = nick;
+  // Sync the manual text input if present
+  const txtEl = document.getElementById('bdt-new-nick-txt-' + br + '-' + idx);
+  if (txtEl) txtEl.value = nick;
+}
+
+// Branch label map (used in _bdtSave status message)
+const BR_LABEL_MAP = {LS:'Langsuan : LS', AS:'Asoke : AS', SK:'Sukhumvit : SK', LP:'Lumpini : LP', OS:'Onsen : OS'};
+
+// ── input เปลี่ยนค่า ─────────────────────────────────
+function ddpInput(el) {
+  const mi    = parseInt(el.dataset.mi);
+  const field = el.dataset.field;
+  const val   = field === 'note' ? el.value : (+el.value || 0);
+  if (!_ddpEdits[mi]) _ddpEdits[mi] = {};
+  _ddpEdits[mi][field] = val;
+
+  if (field !== 'note') {
+    const r   = masterRecords[mi];
+    const ed  = _ddpEdits[mi];
+    const FIELDS = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+    const tot = FIELDS.reduce((s,f) => s + (f in ed ? ed[f] : (r[f]||0)), 0);
+    const el2 = document.getElementById(`ddp-tot-${mi}`);
+    if (el2) el2.textContent = numFmt(tot);
+  }
+}
+
+// ── drag-and-drop เลื่อนลำดับ ────────────────────────
+function _ddpInitDrag() {
+  const oldTbody = document.getElementById('ddp-tbody');
+  if (!oldTbody) return;
+  const tbody = oldTbody.cloneNode(true);
+  oldTbody.parentNode.replaceChild(tbody, oldTbody);
+
+  tbody.addEventListener('dragstart', e => {
+    const tr = e.target.closest('tr[data-pos]');
+    if (!tr) return;
+    _ddpDragSrc = parseInt(tr.dataset.pos);
+    tr.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  tbody.addEventListener('dragend', () => {
+    tbody.querySelectorAll('tr[data-pos]').forEach(r => {
+      r.style.opacity = '';
+      r.classList.remove('drag-over-top','drag-over-bottom');
+    });
+    _ddpDragSrc = null;
+  });
+  tbody.addEventListener('dragover', e => {
+    e.preventDefault();
+    const tr = e.target.closest('tr[data-pos]');
+    tbody.querySelectorAll('tr[data-pos]').forEach(r => r.classList.remove('drag-over-top','drag-over-bottom'));
+    if (!tr || _ddpDragSrc === null) return;
+    const mid = tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+    tr.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+  });
+  tbody.addEventListener('dragleave', e => {
+    const tr = e.target.closest('tr[data-pos]');
+    if (tr) tr.classList.remove('drag-over-top','drag-over-bottom');
+  });
+  tbody.addEventListener('drop', e => {
+    e.preventDefault();
+    const tr = e.target.closest('tr[data-pos]');
+    if (!tr || _ddpDragSrc === null) return;
+    const destPos = parseInt(tr.dataset.pos);
+    if (_ddpDragSrc === destPos) return;
+
+    const insertAfter = e.clientY >= tr.getBoundingClientRect().top + tr.getBoundingClientRect().height / 2;
+
+    // reorder masterRecords ตามลำดับใหม่
+    const destMi  = _ddpOrder[destPos];
+    const srcMi   = _ddpOrder.splice(_ddpDragSrc, 1)[0];
+    let newDest   = _ddpOrder.indexOf(destMi);
+    if (insertAfter) newDest += 1;
+    _ddpOrder.splice(newDest, 0, srcMi);
+
+    // Clear any pending edits before index rebuild — stale indices would corrupt data
+    _ddpEditing = false;
+    _ddpEdits   = {};
+
+    // สะท้อนลำดับใหม่กลับ masterRecords
+    const otherRecs = masterRecords.filter((_, i) => !_ddpOrder.includes(i));
+    const orderedRecs = _ddpOrder.map(i => masterRecords[i]);
+    masterRecords = [...orderedRecs, ...otherRecs];
+    // อัปเดต _ddpOrder ให้ชี้ index ใหม่
+    _ddpOrder = orderedRecs.map((_, i) => i);
+
+    _ddpDragSrc = null;
+    msSaveLocal(true); // skipRefresh — _ddpRender() below handles UI update
+    _ddpRefreshButtons();
+    _ddpRender();
+  });
+}
+
+// ── ปุ่ม "ยอดรวม" → เปิด Modal ยอดรวมทุกวัน ──────────
+let _ddpShowTotal = false; // ไม่ใช้แล้ว แต่คงไว้เผื่อ ref
+function ddpToggleTotal() {
+  openAllTotalModal();
+}
+
+function openAllTotalModal() {
+  const modal = document.getElementById('all-total-modal');
+  if (!modal) return;
+
+  const FIELDS   = ['LS','AS','SK','LP','OS','OT','R','S','Level','Tip'];
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+  const CO_KEY   = { Sinsub:'sinsub', Sukjai:'sukjai', Happines:'happines' };
+
+  // รวมยอดต่อ nick ทั้งหมด
+  const byNick = {};
+  for (const r of masterRecords) {
+    if ((r.company||'?') === '?') continue; // exclude unknown employees from totals
+    const nick = r.nick;
+    if (!byNick[nick]) byNick[nick] = { nick, fullName: r.fullName||r.nick, company: r.company||'?', isOsLevel: r.isOsLevel, ...Object.fromEntries(FIELDS.map(f=>[f,0])) };
+    FIELDS.forEach(f => { byNick[nick][f] += r[f]||0; });
+  }
+
+  // จัดกลุ่ม
+  const byCompany = {};
+  COMPANIES.forEach(c => byCompany[c] = []);
+  Object.values(byNick).forEach(row => {
+    const co = COMPANIES.slice(0,3).includes(row.company) ? row.company : '?';
+    byCompany[co].push(row);
+  });
+
+  // หา period
+  const allDates = [...new Set(masterRecords.map(r=>(r.date||'').split(',').map(s=>s.trim())).flat().filter(Boolean))].sort();
+  const periodTxt = allDates.length ? `${allDates[0]} – ${allDates[allDates.length-1]} · ${allDates.length} วัน · ${Object.keys(byNick).length} คน` : '';
+  document.getElementById('all-total-period').textContent = periodTxt;
+
+  let html = `<thead><tr>
+    <th class="th-left" style="min-width:80px">Nick</th>
+    <th class="th-left" style="min-width:100px">ชื่อจริง</th>
+    <th class="th-left">Co.</th>
+    <th>LS</th><th>AS</th><th>SK</th><th>LP</th><th>OS</th>
+    <th>OT</th><th>R</th><th>S</th>
+    <th style="color:#f6ad55">Level฿</th>
+    <th style="color:#f6ad55">Tip</th>
+    <th style="background:#0d2d1a;color:white">Total</th>
+  </tr></thead><tbody>`;
+
+  let gLS=0,gAS=0,gSK=0,gLP=0,gOS=0,gOT=0,gR=0,gS=0,gLv=0,gTip=0;
+
+  for (const co of COMPANIES) {
+    const rows = byCompany[co];
+    if (!rows.length) continue;
+    const coKey   = CO_KEY[co] || 'unknown';
+    const coLabel = { Sinsub:'SINSUB', Sukjai:'SUKJAI', Happines:'HAPPINES', '?':'ไม่ทราบ' }[co];
+    html += `<tr><td colspan="14" class="co-hdr-${coKey}" style="color:white;font-size:11px;font-weight:700;padding:4px 8px">${coLabel}</td></tr>`;
+
+    let sLS=0,sAS=0,sSK=0,sLP=0,sOS=0,sOT=0,sR=0,sS=0,sLv=0,sTip=0;
+    for (const row of rows) {
+      const tot = FIELDS.reduce((s,f)=>s+row[f],0);
+      const osTag = row.isOsLevel ? '<span style="font-size:9px;background:#fed7d7;color:#c53030;border-radius:3px;padding:1px 3px;margin-left:2px">OS</span>' : '';
+      const fmt = v => v ? `<span style="color:#2d3748">${numFmt(v)}</span>` : `<span style="color:#e2e8f0">—</span>`;
+      html += `<tr class="co-${coKey}">
+        <td style="text-align:left;padding:5px 8px"><strong>${escHtml(row.nick)}</strong>${osTag}</td>
+        <td style="font-size:11px;color:#4a5568;text-align:left;padding:5px 8px">${escHtml(row.fullName)}</td>
+        <td style="font-size:10px;color:#718096">${row.company||'?'}</td>
+        ${FIELDS.map(f=>`<td class="num">${fmt(row[f])}</td>`).join('')}
+        <td class="num" style="font-weight:700;background:#0d2d1a;color:white">${numFmt(tot)}</td>
+      </tr>`;
+      sLS+=row.LS; sAS+=row.AS; sSK+=row.SK; sLP+=row.LP; sOS+=row.OS;
+      sOT+=row.OT; sR+=row.R; sS+=row.S; sLv+=row.Level; sTip+=row.Tip;
+    }
+    const sTot=sLS+sAS+sSK+sLP+sOS+sOT+sR+sS+sLv+sTip;
+    html += `<tr class="sub-row">
+      <td colspan="3" style="padding:4px 8px;text-align:left">รวม ${rows.length} คน</td>
+      <td class="num">${numFmt(sLS)}</td><td class="num">${numFmt(sAS)}</td>
+      <td class="num">${numFmt(sSK)}</td><td class="num">${numFmt(sLP)}</td>
+      <td class="num">${numFmt(sOS)}</td><td class="num">${numFmt(sOT)}</td>
+      <td class="num">${numFmt(sR)}</td><td class="num">${numFmt(sS)}</td>
+      <td class="num">${numFmt(sLv)}</td><td class="num">${numFmt(sTip)}</td>
+      <td class="num" style="background:#0d2d1a;color:white">${numFmt(sTot)}</td>
+    </tr>`;
+    // Exclude unknown employees ('?') from grand total
+    if (co !== '?') {
+      gLS+=sLS; gAS+=sAS; gSK+=sSK; gLP+=sLP; gOS+=sOS;
+      gOT+=sOT; gR+=sR; gS+=sS; gLv+=sLv; gTip+=sTip;
+    }
+  }
+
+  const gTot=gLS+gAS+gSK+gLP+gOS+gOT+gR+gS+gLv+gTip;
+  html += `<tr class="grand-row">
+    <td colspan="3" style="padding:6px 8px;text-align:left">ยอดรวมทั้งหมด</td>
+    <td class="num">${numFmt(gLS)}</td><td class="num">${numFmt(gAS)}</td>
+    <td class="num">${numFmt(gSK)}</td><td class="num">${numFmt(gLP)}</td>
+    <td class="num">${numFmt(gOS)}</td><td class="num">${numFmt(gOT)}</td>
+    <td class="num">${numFmt(gR)}</td><td class="num">${numFmt(gS)}</td>
+    <td class="num">${numFmt(gLv)}</td><td class="num">${numFmt(gTip)}</td>
+    <td class="num" style="font-size:13px">฿${gTot.toLocaleString()}</td>
+  </tr></tbody>`;
+
+  document.getElementById('all-total-tbl').innerHTML = html;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAllTotalModal() {
+  const modal = document.getElementById('all-total-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ── โหมดแก้ไข ────────────────────────────────────────
+function ddpToggleEdit() {
+  _ddpEditing = true;
+  _ddpEdits   = {};
+  _ddpRefreshButtons();
+  _ddpRender();
+}
+
+function ddpCancelEdit() {
+  _ddpEditing = false;
+  _ddpEdits   = {};
+  _ddpRefreshButtons();
+  _ddpRender();
+}
+
+function ddpSave() {
+  for (const [miStr, changes] of Object.entries(_ddpEdits)) {
+    const mi = parseInt(miStr);
+    if (!masterRecords[mi]) continue;
+    // Clamp numeric fields to >= 0 before saving
+    const sanitized = {};
+    for (const [field, val] of Object.entries(changes)) {
+      sanitized[field] = typeof val === 'number' ? Math.max(0, val) : val;
+    }
+    Object.assign(masterRecords[mi], sanitized);
+    // Summary table edits change the OT/R/S totals directly — reconcile the
+    // per-branch breakdown so branch tables/exports stay consistent and later
+    // branch-table saves don't revert this edit (fixed 2026-06-12)
+    for (const typ of ['OT','R','S']) {
+      if (typ in sanitized) _syncPerBranchTotal(masterRecords[mi], typ);
+    }
+  }
+  msSaveLocal(true); // skipRefresh — _ddpRender() and msRenderTable() below handle UI update
+  msDirty      = true;
+  _ddpEdits    = {};
+  _ddpEditing  = false;
+  _ddpRefreshButtons();
+  _ddpRender();
+  msRenderTable();
+  showStatus('success', `✅ บันทึกแก้ไขวันที่ ${_ddpIso} แล้ว`);
+  ghSilentPushIfConfigured();
+}
+
+// ── ลบแถวเดียว ───────────────────────────────────────
+function ddpDeleteRow(mi) {
+  if (!confirm(`ลบข้อมูล "${masterRecords[mi]?.nick}" ออกจากวันนี้?`)) return;
+  // Exit edit mode first — indices shift after splice and stale _ddpEdits would corrupt data
+  _ddpEditing = false;
+  _ddpEdits   = {};
+  masterRecords.splice(mi, 1);
+  msSaveLocal(true); // skipRefresh — msRefreshUI() called below
+  msDirty    = true;
+  _ddpOrder  = _ddpGetIndices(_ddpIso);
+  if (!_ddpOrder.length) {
+    document.getElementById('day-detail-panel').style.display = 'none';
+    _ddpIso = null;
+  } else {
+    _ddpRefreshButtons();
+    _ddpRender();
+  }
+  msRefreshUI();
+  msRenderTable();
+  ghSilentPushIfConfigured();
+}
+
+// ── ลบทั้งวัน ─────────────────────────────────────────
+function ddpDeleteDay() {
+  const iso = _ddpIso;
+  if (!confirm(`ลบข้อมูลทั้งหมดของวันที่ ${_isoToThai(iso)}?`)) return;
+  masterRecords = masterRecords.filter(r => !(r.date||'').split(',').map(s=>s.trim()).includes(iso));
+  msSaveLocal();
+  msDirty = true;
+  document.getElementById('day-detail-panel').style.display = 'none';
+  _ddpIso = null;
+  msRefreshUI();
+  msRenderTable();
+  showStatus('success', `🗑 ลบข้อมูลวันที่ ${_isoToThai(iso)} แล้ว`);
+  ghSilentPushIfConfigured();
+}
+
+function msRenderTable() { /* ไม่ใช้แล้ว — ใช้ Day Detail Panel แทน */ }
+
+// ─── msHandleFiles: อัปโหลดไฟล์ใน Master tab (preview ก่อน confirm) ────────
+let _msLoading = false;
+async function msHandleFiles(fileList) {
+  if (_msLoading) { showStatus('info','⏳ กำลังประมวลผลไฟล์อยู่ กรุณารอ...'); return; }
+  const files = Array.from(fileList);
+  if (!files.length) return;
+  _msLoading = true;
+  const msBox = document.getElementById('ms-upload-box');
+  if (msBox) msBox.style.pointerEvents = 'none';
+  const dp = document.getElementById('ms-diff-panel');
+  dp.style.display = 'block';
+  dp.innerHTML = '<p style="color:#718096;font-size:13px">⏳ กำลังอ่านไฟล์...</p>';
+
+  // Parse all files → group raw records by ISO date
+  const byDate = {};
+  let declaredFrom = null, declaredTo = null;
+  for (const file of files) {
+    const result = await parsePayrollFile(file);
+    const raw = result.records || result; // fallback if old shape
+    if (result.declaredFrom) declaredFrom = result.declaredFrom;
+    if (result.declaredTo)   declaredTo   = result.declaredTo;
+    for (const rec of raw) {
+      const iso = rec.saleDate instanceof Date && !isNaN(rec.saleDate)
+        ? dateToISO(rec.saleDate) : null;
+      if (!iso) continue;
+      if (!byDate[iso]) byDate[iso] = { recs: [], source: file.name };
+      byDate[iso].recs.push(rec);
+    }
+  }
+
+  // Build one master record per date+nick
+  const __BLIST = ['LS','AS','SK','LP','OS'];
+  const newRecs = [];
+  for (const iso of Object.keys(byDate).sort()) {
+    const rows = _buildRowsFromRecs(byDate[iso].recs);
+    for (const row of rows) {
+      const rec = {
+        id: genId(), date: iso,
+        nick: row.nick, fullName: row.fullName,
+        company: row.company, level: row.level,
+        LS:row.LS, AS:row.AS, SK:row.SK, LP:row.LP, OS:row.OS,
+        R:row.R, OT:row.OT, S:row.S, mins:row.mins, Level:row.Level, Tip:0,
+        isOsLevel:row.isOsLevel, note:'',
+        source: byDate[iso].source,
+      };
+      for (const b of __BLIST) { rec['OT_'+b]=row['OT_'+b]||0; rec['R_'+b]=row['R_'+b]||0; rec['S_'+b]=row['S_'+b]||0; rec['mins_'+b]=row['mins_'+b]||0; rec['Level_'+b]=row['Level_'+b]||0; }
+      newRecs.push(rec);
+    }
+  }
+
+  if (!newRecs.length) {
+    dp.innerHTML = '<p style="color:#c53030">❌ ไม่พบข้อมูล Therapist</p>';
+    _msLoading = false;
+    if (msBox) msBox.style.pointerEvents = '';
+    return;
+  }
+
+  const sortedDates = Object.keys(byDate).sort();
+  const existKeys   = new Set(masterRecords.map(r => r.date+'|'+r.nick));
+  const addRecs     = newRecs.filter(r => !existKeys.has(r.date+'|'+r.nick));
+  const dupRecs     = newRecs.filter(r =>  existKeys.has(r.date+'|'+r.nick));
+  const allNicks    = new Set(newRecs.map(r => r.nick));
+  const grandTotal  = newRecs.reduce((s,r)=>s+r.LS+r.AS+r.SK+r.LP+r.OS+r.OT+r.R+r.S, 0);
+
+
+  window._msPendingRecs = newRecs;
+
+  // ── Single date: compact diff ──────────────────────────────
+  if (sortedDates.length === 1) {
+    const iso = sortedDates[0];
+    let dh = `<h4>📋 Preview — ${_isoToThai(iso)} · ${newRecs.length} records</h4>`;
+    if (addRecs.length) {
+      dh += `<div style="margin-bottom:6px;font-size:12px;color:#276749;font-weight:600">✅ ใหม่ ${addRecs.length} records</div>`;
+      addRecs.slice(0,10).forEach(r => { dh += `<div class="diff-item add">➕ ${r.nick} · ฿${(r.LS+r.AS+r.SK+r.LP+r.OS+r.OT+r.R+r.S).toLocaleString()}</div>`; });
+      if (addRecs.length > 10) dh += `<div class="diff-item add">... และอีก ${addRecs.length-10} records</div>`;
+    }
+    if (dupRecs.length) {
+      dh += `<div style="margin:8px 0 6px;font-size:12px;color:#c53030;font-weight:600">⚠️ Replace ${dupRecs.length} records</div>`;
+      dupRecs.slice(0,5).forEach(r => { dh += `<div class="diff-item dup">🔄 ${r.nick}</div>`; });
+      if (dupRecs.length > 5) dh += `<div class="diff-item dup">... และอีก ${dupRecs.length-5} records</div>`;
+    }
+    dh += `<div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-action btn-green" id="ms-confirm-btn">✅ ยืนยัน Merge</button>
+      <button class="btn-action btn-gray" onclick="msCancelMerge()">✕ ยกเลิก</button>
+    </div>`;
+    dp.innerHTML = dh;
+    dp.querySelector('#ms-confirm-btn').onclick = () => msConfirmMerge(window._msPendingRecs);
+    _msLoading = false;
+    if (msBox) msBox.style.pointerEvents = '';
+    return;
+  }
+
+  // ── Multi-date: day-card diff ──────────────────────────────
+  const d0 = sortedDates[0], d1 = sortedDates[sortedDates.length-1];
+
+  // ── File Quality Validation ──────────────────────────────
+  let validationHtml = '';
+  if (declaredFrom && declaredTo) {
+    const dfStr = declaredFrom.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const dtStr = declaredTo.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const warnings = [];
+
+    // 1. Dates in data that fall outside the declared period
+    // Compare as ISO strings — new Date(iso) parses as UTC midnight while
+    // declaredFrom/To are local, which falsely flagged the period's last day
+    // in any timezone east of UTC (fixed 2026-06-12)
+    const fromIso = dateToISO(declaredFrom), toIso = dateToISO(declaredTo);
+    const outsideDates = sortedDates.filter(iso => iso < fromIso || iso > toIso);
+    if (outsideDates.length) {
+      warnings.push(`<div style="margin-bottom:6px">
+        <strong>⚠️ พบวันที่นอกช่วงที่ประกาศ (${outsideDates.length} วัน):</strong>
+        <div style="margin-top:4px;font-size:11px;color:#744210">${outsideDates.map(_isoToThai).join(', ')}</div>
+      </div>`);
+    }
+
+    // 2. Missing dates within the declared period (skip weekends optional — show all gaps)
+    const missingDates = [];
+    let cur = new Date(declaredFrom);
+    const end = new Date(declaredTo);
+    while (cur <= end) {
+      const iso = dateToISO(cur);
+      if (!byDate[iso]) missingDates.push(iso);
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (missingDates.length) {
+      const shown = missingDates.slice(0, 10).map(_isoToThai).join(', ');
+      const more  = missingDates.length > 10 ? ` ... และอีก ${missingDates.length - 10} วัน` : '';
+      warnings.push(`<div>
+        <strong>⚠️ วันที่หายไปในช่วงที่ประกาศ (${missingDates.length} วัน):</strong>
+        <div style="margin-top:4px;font-size:11px;color:#744210">${shown}${more}</div>
+      </div>`);
+    }
+
+    if (warnings.length) {
+      validationHtml = `<div style="background:#fffbeb;border:1px solid #f6ad55;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:#744210">
+        <div style="font-weight:700;margin-bottom:8px">🔍 ตรวจสอบคุณภาพไฟล์ — ช่วงที่ประกาศ: ${dfStr} – ${dtStr}</div>
+        ${warnings.join('')}
+        <div style="margin-top:8px;font-size:11px;color:#92400e">กรุณาตรวจสอบก่อน Confirm Merge</div>
+      </div>`;
+    } else {
+      validationHtml = `<div style="background:#f0faf5;border:1px solid #68d391;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:12px;color:#276749">
+        ✅ ข้อมูลครบถ้วนตามช่วงที่ประกาศ: ${dfStr} – ${dtStr}
+      </div>`;
+    }
+  }
+
+  let dh = `<h4>📋 Preview — ${_isoToThai(d0)} – ${_isoToThai(d1)}</h4>${validationHtml}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <span data-ms-stat="days" style="font-size:12px;background:#f0faf5;border:1px solid #68d391;border-radius:6px;padding:4px 10px;color:#276749"><strong>${sortedDates.length}</strong> วัน</span>
+    <span data-ms-stat="emp" style="font-size:12px;background:#f0faf5;border:1px solid #68d391;border-radius:6px;padding:4px 10px;color:#276749"><strong>${allNicks.size}</strong> พนักงาน</span>
+    <span data-ms-stat="total" style="font-size:12px;background:#f0faf5;border:1px solid #68d391;border-radius:6px;padding:4px 10px;color:#276749">฿<strong>${grandTotal.toLocaleString()}</strong></span>
+    ${dupRecs.length ? `<span style="font-size:12px;background:#fffbeb;border:1px solid #f6ad55;border-radius:6px;padding:4px 10px;color:#744210">⚠️ replace <strong>${dupRecs.length}</strong> records</span>` : ''}
+  </div>
+  <div class="multidate-grid">`;
+
+  const dupDates = new Set(dupRecs.map(r => r.date));
+  for (const iso of sortedDates) {
+    const dayRecs  = newRecs.filter(r => r.date === iso);
+    const dayTotal = dayRecs.reduce((s,r)=>s+r.LS+r.AS+r.SK+r.LP+r.OS+r.OT+r.R+r.S, 0);
+    const hasDup   = dupDates.has(iso);
+    const BLIST2 = ['LS','AS','SK','LP','OS'];
+    const brSum2 = BLIST2.map(b => {
+      const bt = dayRecs.reduce((s,r)=>s+(r[b]||0),0);
+      return bt > 0 ? `<span style="font-size:10px;background:rgba(255,255,255,0.25);border-radius:4px;padding:1px 5px;font-weight:600">${b}</span>` : '';
+    }).filter(Boolean).join('<span style="color:rgba(255,255,255,0.4);margin:0 1px">·</span>');
+    dh += `<div class="md-day-card${hasDup?' dup-warn':''}" style="cursor:default">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1" onclick="event.stopPropagation()">
+          <input type="checkbox" class="ms-day-check" data-iso="${iso}" checked
+            style="width:15px;height:15px;cursor:pointer;accent-color:#276749"
+            onchange="_msUpdateMergeStats()">
+          <span style="font-size:12px;font-weight:700;color:#1a202c">📅 ${_isoToThai(iso)}</span>
+        </label>
+        <span class="md-day-badge ${hasDup?'dup':'new'}" style="position:static;margin:0">${hasDup?'replace':'new'}</span>
+      </div>
+      <div style="font-size:11px;color:#4a5568;margin:4px 0 2px">${dayRecs.length} คน · ฿${dayTotal.toLocaleString()}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${brSum2}</div>
+    </div>`;
+  }
+  dh += `</div>
+  <div style="display:flex;gap:10px;margin-top:16px">
+    <button class="btn-action btn-green" id="ms-confirm-btn">✅ ยืนยัน Merge ทั้งหมด</button>
+    <button class="btn-action btn-gray" onclick="msCancelMerge()">✕ ยกเลิก</button>
+  </div>`;
+  dp.innerHTML = dh;
+  dp.querySelector('#ms-confirm-btn').onclick = () => msConfirmMerge(window._msPendingRecs);
+  _msLoading = false;
+  const msBox2 = document.getElementById('ms-upload-box');
+  if (msBox2) msBox2.style.pointerEvents = '';
+}
+
+// ─── _msUpdateMergeStats ─────────────────────────────────────────────────────
+function _msUpdateMergeStats() {
+  if (!window._msPendingRecs) return;
+  const checked = new Set([...document.querySelectorAll('.ms-day-check:checked')].map(el => el.dataset.iso));
+  const filtered = window._msPendingRecs.filter(r => checked.has(r.date));
+  const nicks = new Set(filtered.map(r => r.nick));
+  const total = filtered.reduce((s,r)=>s+(r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0)+(r.OT||0)+(r.R||0)+(r.S||0), 0);
+  // Update summary badges inside diff panel if they exist
+  const dp = document.getElementById('ms-diff-panel');
+  if (!dp) return;
+  const daysBadge = dp.querySelector('[data-ms-stat="days"]');
+  const empBadge  = dp.querySelector('[data-ms-stat="emp"]');
+  const totBadge  = dp.querySelector('[data-ms-stat="total"]');
+  if (daysBadge) { const s = daysBadge.querySelector('strong'); if (s) s.textContent = checked.size; else daysBadge.textContent = checked.size + ' วัน'; }
+  if (empBadge)  { const s = empBadge.querySelector('strong');  if (s) s.textContent = nicks.size;   else empBadge.textContent  = nicks.size + ' พนักงาน'; }
+  if (totBadge)  { const s = totBadge.querySelector('strong');  if (s) s.textContent = total.toLocaleString(); else totBadge.textContent = '฿' + total.toLocaleString(); }
+}
+
+// ─── msConfirmMerge ──────────────────────────────────────────────────────────
+function msConfirmMerge(recs) {
+  if (!recs || !recs.length) return;
+  // Filter to only checked dates
+  const checkedIsos = new Set([...document.querySelectorAll('.ms-day-check:checked')].map(el => el.dataset.iso));
+  if (checkedIsos.size > 0) {
+    recs = recs.filter(r => checkedIsos.has(r.date));
+  }
+  if (!recs.length) { showStatus('error','❌ ไม่มีวันที่เลือก'); return; }
+  // Remove ALL existing records for these dates (full-day replace), then add new
+  const removeDates = new Set(
+    recs.flatMap(r => (r.date||'').split(',').map(s => s.trim()))
+  );
+  const removedRecs = masterRecords.filter(r =>
+    (r.date||'').split(',').map(s=>s.trim()).some(d => removeDates.has(d))
+  );
+  // Full-day replace deletes manually-added rows and notes (only Level/Tip are
+  // auto-preserved) — warn before destroying them (added 2026-06-12)
+  const manualLost = removedRecs.filter(r => r.source === 'manual' || (r.note||'').trim());
+  if (manualLost.length) {
+    const names = [...new Set(manualLost.map(r => r.nick))].slice(0,8).join(', ');
+    if (!confirm(`⚠️ วันที่ที่จะแทนที่มีข้อมูลที่เพิ่ม/แก้ไขเอง ${manualLost.length} รายการ (${names})\nข้อมูลเหล่านี้จะถูกลบ (Level/Tip จะถูกเก็บไว้ให้อัตโนมัติ)\n\nต้องการ Merge ต่อหรือไม่?`)) return;
+  }
+  masterRecords = masterRecords.filter(r =>
+    !(r.date||'').split(',').map(s=>s.trim()).some(d => removeDates.has(d))
+  );
+  _preserveLevelTip(recs, removedRecs);
+  masterRecords.push(...recs);
+  masterRecords.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  msSaveLocal();
+  msDirty = true;
+  window._msPendingRecs = null;
+  payrollFiles.length = 0;
+  const _fi1 = document.getElementById('ms-file-input');
+  if (_fi1) _fi1.value = '';
+  const dp = document.getElementById('ms-diff-panel');
+  if (dp) {
+    dp.innerHTML = `<div style="color:#276749;font-size:13px;font-weight:600">✅ Merge เสร็จแล้ว — เพิ่ม/แทนที่ ${recs.length} records</div>`;
+    setTimeout(() => { dp.innerHTML = ''; dp.style.display = 'none'; }, 4000);
+  }
+  msRefreshUI();
+  ghSilentPushIfConfigured();
+  showStatus('success', `✅ Merge ${recs.length} records เสร็จแล้ว`);
+}
+
+// ─── msCancelMerge ───────────────────────────────────────────────────────────
+function msCancelMerge() {
+  window._msPendingRecs = null;
+  payrollFiles.length = 0;
+  const _fi2 = document.getElementById('ms-file-input');
+  if (_fi2) _fi2.value = '';
+  const dp = document.getElementById('ms-diff-panel');
+  if (dp) { dp.innerHTML = ''; dp.style.display = 'none'; }
+  showStatus('info','ยกเลิก Merge แล้ว');
+}
+
+// ─── msRefreshFromRoster ─────────────────────────────────────────────────────
+// Apply the current Employees DB (roster) to records already imported into
+// Master: updates company / level / isOsLevel by nick. Does NOT recompute
+// commission/OT/R/S (re-import the payroll for that). Snapshot stays otherwise.
+function msRefreshFromRoster(){
+  if(!masterRecords.length){ showStatus('error','ไม่มีข้อมูล Master ให้อัปเดต'); return; }
+  // Detect both directions: (a) records to UPDATE from a matching DB entry, and
+  // (b) records to REVERT to unknown because their nick was deleted from the DB.
+  let upd=0, rev=0; const ex=[];
+  for(const r of masterRecords){
+    const info=NICK_INFO[r.nick];
+    if(!info){
+      // nick no longer exists in Employees DB → revert to unknown/unmatched
+      if(r.company!=='?' || r.level!=='?' || r.isOsLevel!==false){
+        rev++;
+        if(ex.length<8) ex.push(`${r.nick}: ${r.company}/${r.level} → ไม่รู้จัก (?)`);
+      }
+      continue;
+    }
+    const newOs=isOsLevelNick(r.nick);
+    if(r.company!==info.company || r.level!==info.level || r.isOsLevel!==newOs){
+      upd++;
+      if(ex.length<8 && r.level!==info.level) ex.push(`${r.nick}: ${r.level}→${info.level}`);
+    }
+  }
+  const total=upd+rev;
+  if(!total){ showStatus('info','✓ ข้อมูล Master ตรงกับฐานข้อมูลพนักงานอยู่แล้ว'); return; }
+  let msg=`ปรับข้อมูล ${total} รายการให้ตรงกับฐานข้อมูลพนักงาน?`;
+  if(upd) msg+=`\n• อัปเดต Company/Level/OS: ${upd} รายการ`;
+  if(rev) msg+=`\n• เปลี่ยนกลับเป็น "ไม่รู้จัก" (ถูกลบจาก DB): ${rev} รายการ`;
+  if(ex.length) msg+=`\n\nตัวอย่าง:\n`+ex.join('\n');
+  msg+=`\n\nหมายเหตุ: ยอด commission จะไม่ถูกคำนวณใหม่ — หากต้องการ ให้ import payroll ของวันนั้นใหม่`;
+  if(!confirm(msg)) return;
+  let changed=0;
+  for(const r of masterRecords){
+    const info=NICK_INFO[r.nick];
+    if(!info){
+      if(r.company!=='?' || r.level!=='?' || r.isOsLevel!==false){
+        r.company='?'; r.level='?'; r.isOsLevel=false;
+        if(r.mins!=null){ for(const b of _BR_ALL){ r['Level_'+b]=0; } r.Level=0; }
+        changed++;
+      }
+      continue;
+    }
+    const newOs=isOsLevelNick(r.nick);
+    if(r.company!==info.company || r.level!==info.level || r.isOsLevel!==newOs){
+      r.company=info.company; r.level=info.level; r.isOsLevel=newOs;
+      if(r.mins!=null){ let lt=0; for(const b of _BR_ALL){ r['Level_'+b]=levelAutoBaht(r.level, r['mins_'+b]||0); lt+=r['Level_'+b]; } r.Level=lt; }
+      changed++;
+    }
+  }
+  msSaveLocal(); msDirty=true; msRefreshUI();
+  if(_ddpIso) _ddpRender();
+  ghSilentPushIfConfigured();
+  showStatus('success',`↻ ปรับ ${changed} รายการจากฐานข้อมูลพนักงานแล้ว`+(rev?` · เปลี่ยนกลับเป็นไม่รู้จัก ${rev} รายการ`:''));
+}
+
+// ─── msClearAll ──────────────────────────────────────────────────────────────
+function msClearAll() {
+  if (!confirm('⚠️ ลบข้อมูล Master ทั้งหมด?\n\nแนะนำ: Export Backup ก่อน (Settings → 💾 สำรองและกู้คืนข้อมูล)\n\nดำเนินการต่อ?')) return;
+  masterRecords = [];
+  msSaveLocal();
+  msDirty = false;
+  msRefreshUI();
+  const ddp = document.getElementById('day-detail-panel');
+  if (ddp) ddp.style.display = 'none';
+  _ddpIso = null;
+  showStatus('info','🗑 ล้างข้อมูล Master แล้ว');
+}
+
+// ─── GitHub helpers ──────────────────────────────────────────────────────────
+function ghGetConfig() {
+  return {
+    token:  localStorage.getItem('gh_token')  || '',
+    repo:   localStorage.getItem('gh_repo')   || '',
+    branch: localStorage.getItem('gh_branch') || 'main',
+    path:   localStorage.getItem('gh_path')   || 'data/master_summary.json',
+  };
+}
+
+function ghLoadSettings() {
+  const cfg = ghGetConfig();
+  const t = document.getElementById('gh-token');
+  const r = document.getElementById('gh-repo');
+  const b = document.getElementById('gh-branch');
+  const p = document.getElementById('gh-path');
+  if (t) t.value = cfg.token;
+  if (r) r.value = cfg.repo;
+  if (b) b.value = cfg.branch;
+  if (p) p.value = cfg.path;
+}
+
+function ghSaveSettings() {
+  const token  = (document.getElementById('gh-token')?.value  || '').trim();
+  const repo   = (document.getElementById('gh-repo')?.value   || '').trim();
+  const branch = (document.getElementById('gh-branch')?.value || 'main').trim();
+  const path   = (document.getElementById('gh-path')?.value   || 'data/master_summary.json').trim();
+  localStorage.setItem('gh_token',  token);
+  localStorage.setItem('gh_repo',   repo);
+  localStorage.setItem('gh_branch', branch);
+  localStorage.setItem('gh_path',   path);
+  _ghSetStatus('ok', '💾 บันทึกแล้ว');
+}
+
+function _ghSetStatus(type, msg) {
+  const wrap = document.getElementById('gh-status-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = `<span class="gh-status ${type}">${msg}</span>`;
+}
+
+function _ghSetSyncBadge(label, color) {
+  const dot   = document.getElementById('gh-sync-dot');
+  const lbl   = document.getElementById('gh-sync-label');
+  const badge = document.getElementById('gh-sync-badge');
+  if (dot)   dot.style.background = color || '#cbd5e0';
+  if (lbl)   lbl.textContent = label;
+  if (badge) badge.style.display = 'flex';
+}
+
+async function ghFetch() {
+  const { token, repo, branch, path } = ghGetConfig();
+  if (!token || !repo) { _ghSetStatus('err', '❌ กรุณากรอก Token และ Repository ก่อน'); return; }
+  if (msDirty && masterRecords.length > 0) {
+    if (!confirm('⚠️ มีการแก้ไขข้อมูลในเครื่องที่ยังไม่ได้ Push\nการดึงข้อมูลจาก GitHub จะเขียนทับการแก้ไขเหล่านั้น\n\nต้องการดำเนินการต่อหรือไม่?')) return;
+  }
+  _ghSetStatus('info', '⏳ กำลังดึงข้อมูลจาก GitHub...');
+  try {
+    const url = `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`;
+    const res = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+    if (!res.ok) {
+      if (res.status === 404) { _ghSetStatus('info', 'ℹ️ ยังไม่มีไฟล์ใน GitHub — ใช้ข้อมูลในเครื่อง'); return; }
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const content = JSON.parse(atob(json.content.replace(/\n/g,'')));
+    if (Array.isArray(content) && content.length) {
+      // Merge: keep local records not in remote, add remote records
+      const remoteKeys = new Set(content.map(r => r.date+'|'+r.nick));
+      const localOnly  = masterRecords.filter(r => !remoteKeys.has(r.date+'|'+r.nick));
+      masterRecords = [...content, ...localOnly];
+      masterRecords.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+      msSaveLocal();
+      msRefreshUI();
+      _ghSetStatus('ok', `✅ ดึงข้อมูลจาก GitHub แล้ว — ${content.length} records`);
+      _ghSetSyncBadge('synced from GitHub', '#68d391');
+    } else {
+      _ghSetStatus('info', 'ℹ️ ไฟล์ใน GitHub ว่างเปล่า');
+    }
+    window._ghSha = json.sha;
+  } catch(e) {
+    _ghSetStatus('err', `❌ ดึงข้อมูลล้มเหลว: ${e.message}`);
+  }
+}
+
+// Fetch current file sha from GitHub (null if the file doesn't exist yet)
+async function _ghFetchSha() {
+  const { token, repo, branch, path } = ghGetConfig();
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`, {
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+    });
+    if (res.ok) { const j = await res.json(); return j.sha || null; }
+  } catch(e) {}
+  return null;
+}
+
+async function ghPush() {
+  const { token, repo, branch, path } = ghGetConfig();
+  if (!token || !repo) { _ghSetStatus('err', '❌ กรุณากรอก Token และ Repository ก่อน'); return; }
+  _ghSetStatus('info', '⏳ กำลัง Push ไปยัง GitHub...');
+  try {
+    // After a page reload _ghSha is lost — fetch it first, otherwise GitHub
+    // rejects the PUT with 422 when the file already exists (fixed 2026-06-12)
+    if (!window._ghSha) window._ghSha = await _ghFetchSha();
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(masterRecords, null, 2))));
+    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+    const doPut = () => {
+      const body = { message: `Update master summary ${new Date().toISOString().slice(0,10)}`, content, branch };
+      if (window._ghSha) body.sha = window._ghSha;
+      return fetch(url, {
+        method: 'PUT',
+        headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    };
+    let res = await doPut();
+    if (!res.ok && (res.status === 409 || res.status === 422)) {
+      // sha out of date (concurrent push / first push of session) — refresh & retry once
+      window._ghSha = await _ghFetchSha();
+      res = await doPut();
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    window._ghSha = json.content?.sha;
+    msDirty = false;
+    _ghSetStatus('ok', `✅ Push สำเร็จ — ${masterRecords.length} records`);
+    _ghSetSyncBadge(`pushed ${new Date().toLocaleTimeString('th-TH')}`, '#68d391');
+  } catch(e) {
+    _ghSetStatus('err', `❌ Push ล้มเหลว: ${e.message}`);
+  }
+}
+
+let _ghSilentPushTimer = null;
+async function ghSilentPushIfConfigured() {
+  const { token, repo } = ghGetConfig();
+  if (!token || !repo) return;
+  // Debounce: rapid consecutive edits trigger ONE push instead of racing PUTs
+  clearTimeout(_ghSilentPushTimer);
+  _ghSilentPushTimer = setTimeout(() => { ghPush().catch(()=>{}); }, 1200);
+}
+
+function ghToggleCollapse() {
+  const wrap = document.getElementById('gh-form-wrap');
+  const btn  = document.getElementById('gh-collapse-btn');
+  if (!wrap) return;
+  const collapsed = wrap.style.display === 'none';
+  wrap.style.display = collapsed ? '' : 'none';
+  if (btn) btn.textContent = collapsed ? '▲' : '▼';
+}
+
+// ─── masterExportExcel ───────────────────────────────────────────────────────
+async function masterExportExcel() {
+  if (!masterRecords.length) { showStatus('error','ไม่มีข้อมูลให้ Export'); return; }
+  if (typeof ExcelJS === 'undefined') { showStatus('error','ExcelJS ยังโหลดไม่เสร็จ กรุณารอสักครู่แล้วลองใหม่'); return; }
+
+  // Disable export button to prevent double-click during generation
+  const _exBtn = [...document.querySelectorAll('.btn-action')].find(b => b.textContent.includes('Export Excel'));
+  if (_exBtn) { _exBtn.disabled = true; _exBtn.textContent = '⏳ กำลัง Export...'; }
+  showStatus('info','⏳ กำลัง Export...');
+
+  const BRANCHES  = ['LS','AS','SK','LP','OS'];
+  const BR_NAME   = { LS:'Langsuan', AS:'Asoke', SK:'Sukhumvit', LP:'Lumpini', OS:'Onsen' };
+  const BR_COLOR  = { LS:'EAF1DD',   AS:'DAEEF3', SK:'FFE599',   LP:'F2DBDB', OS:'D9D2E9' };
+  const COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+  const CO_LABEL  = { Sinsub:'— SINSUB —', Sukjai:'— SUKJAI —', Happines:'— HAPPINES —', '?':'— ไม่ทราบบริษัท —' };
+  const CO_BG     = { Sinsub:'E2EFDA', Sukjai:'DEEAF1', Happines:'FCE4D6', '?':'FFE0E0' };
+
+  const _allDates = [...new Set(masterRecords.map(r=>(r.date||'').split(',').map(s=>s.trim())).flat().filter(Boolean))].sort();
+  const periodStr = _allDates.length ? `${_isoToThai(_allDates[0])} – ${_isoToThai(_allDates[_allDates.length-1])}` : 'DIORA Export';
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'DIORA App';
+  wb.created = new Date();
+
+  // ── style helpers ────────────────────────────────────────────────────────────
+  function bgFill(hex) {
+    return { type:'pattern', pattern:'solid', fgColor:{ argb:'FF'+hex }, bgColor:{ argb:'FFFFFFFF' } };
+  }
+  function border() {
+    const s = { style:'thin', color:{ argb:'FF000000' } };
+    return { top:s, bottom:s, left:s, right:s };
+  }
+  function hdrCell(ws, row, col, value, bgHex, bold=true, hAlign='center') {
+    const cell = ws.getCell(row, col);
+    cell.value = value;
+    cell.font  = { bold, name:'Calibri', size:11, color:{ argb:'FF000000' } };
+    cell.alignment = { horizontal:hAlign, vertical:'middle', wrapText:true };
+    cell.border = border();
+    if (bgHex) cell.fill = bgFill(bgHex);
+    return cell;
+  }
+  function numCell(ws, row, col, value, bgHex) {
+    const cell = ws.getCell(row, col);
+    cell.value = value || 0;
+    cell.numFmt = '#,##0';
+    cell.font   = { name:'Calibri', size:11 };
+    cell.alignment = { horizontal:'right', vertical:'middle' };
+    cell.border = border();
+    if (bgHex) cell.fill = bgFill(bgHex);
+    return cell;
+  }
+  function textCell(ws, row, col, value, bgHex, bold=false, hAlign='center') {
+    const cell = ws.getCell(row, col);
+    cell.value = value || '';
+    cell.font  = { bold, name:'Calibri', size:11 };
+    cell.alignment = { horizontal:hAlign, vertical:'middle' };
+    cell.border = border();
+    if (bgHex) cell.fill = bgFill(bgHex);
+    return cell;
+  }
+  function mergeRow(ws, row, c1, c2, value, bgHex, bold=true, hAlign='center') {
+    ws.mergeCells(row, c1, row, c2);
+    hdrCell(ws, row, c1, value, bgHex, bold, hAlign);
+    // fill merged empty cells style too
+    for (let c=c1+1; c<=c2; c++) {
+      const cell = ws.getCell(row, c);
+      cell.border = border();
+      if (bgHex) cell.fill = bgFill(bgHex);
+    }
+  }
+
+  // ── aggregate by nick (for summary sheet) ───────────────────────────────────
+  function aggregateByNick(recs) {
+    const map = {}, order = [];
+    for (const r of recs) {
+      if (!map[r.nick]) {
+        map[r.nick] = { nick:r.nick, fullName:r.fullName||r.nick, company:r.company||'?', level:r.level||'',
+                        LS:0,AS:0,SK:0,LP:0,OS:0,OT:0,R:0,S:0,Level:0,Tip:0 };
+        order.push(r.nick);
+      }
+      const nd = map[r.nick];
+      for (const br of BRANCHES) nd[br] += (r[br]||0);
+      nd.OT    += (r.OT||0);  nd.R  += (r.R||0);
+      nd.S     += (r.S||0);   nd.Level += (r.Level||0);
+      nd.Tip   += (r.Tip||0);
+    }
+    return order.map(n => map[n]);
+  }
+
+  // ── SUMMARY SHEET ────────────────────────────────────────────────────────────
+  // Cols: 1=No, 2=ID, 3=Company, 4=Level, 5=Name-Surname, 6=Nick,
+  //       7=LS,8=AS,9=SK,10=LP,11=OS,  12=Com รวม,
+  //       13=Level฿, 14=OT, 15=R, 16=S, 17=Tip, 18=Total
+  function buildSummarySheet(recs, sheetName) {
+    const ws = wb.addWorksheet(sheetName);
+    ws.views = [{ state:'frozen', ySplit:3 }];
+
+    // Row 1: Title
+    ws.mergeCells(1,1,1,18);
+    hdrCell(ws,1,1, `DIORA SPA — ${sheetName}  |  ${periodStr}`, '4472C4', true, 'left');
+    ws.getRow(1).height = 22;
+    ws.getCell(1,1).font = { bold:true, name:'Calibri', size:12, color:{ argb:'FFFFFFFF' } };
+
+    // Row 2: Section headers
+    mergeRow(ws,2,1,6,   '',                      null,    false);
+    mergeRow(ws,2,7,11,  'Commission per Branch', 'CCCCCC', true);
+    hdrCell(ws,2,12,     'ค่ามือรวม',             '93C47D', true);
+    mergeRow(ws,2,13,17, 'Including all branches','CCCCCC', true);
+    hdrCell(ws,2,18,     'รวมทั้งหมด',            '00FFFF', true);
+    ws.getRow(2).height = 18;
+
+    // Row 3: Column headers
+    const colH  = ['No','ID','Company','Level','Name-Surname','Nick','LS','AS','SK','LP','OS','Com รวม','Level฿','OT','R','S','Tip','Total'];
+    const colBg = [null,null,null,null,null,null,'EAF1DD','DAEEF3','FFE599','F2DBDB','D9D2E9','93C47D','A2C4C9','8E7CC3','F6B26B','F9CB9C','FFF2CC','00FFFF'];
+    colH.forEach((h,i) => hdrCell(ws,3,i+1,h,colBg[i],true,'center'));
+    ws.getRow(3).height = 18;
+
+    // Column widths
+    const widths = [5,8,11,10,30,9,10,10,10,10,10,10,10,10,10,10,10,12];
+    widths.forEach((w,i) => { ws.getColumn(i+1).width = w; });
+
+    const nickRecs = aggregateByNick(recs);
+    let rowIdx = 4, no = 1;
+
+    for (const co of COMPANIES) {
+      const list = nickRecs.filter(r => (co==='?')
+        ? !['Sinsub','Sukjai','Happines'].includes(r.company)
+        : r.company === co);
+      if (!list.length) continue;
+      // Sort ascending by scanner employee ID (unknown IDs sort last)
+      list.sort((a,b)=>empIdSortKey(a.nick)-empIdSortKey(b.nick));
+
+      // Company header
+      mergeRow(ws, rowIdx, 2, 18, CO_LABEL[co], CO_BG[co], true, 'left');
+      textCell(ws, rowIdx, 1, '', CO_BG[co]);
+      ws.getRow(rowIdx).height = 16;
+      rowIdx++;
+
+      let sCom=0,sLS=0,sAS=0,sSK=0,sLP=0,sOS=0,sLvl=0,sOT=0,sR=0,sS=0,sTip=0;
+      for (const r of list) {
+        const com   = (r.LS||0)+(r.AS||0)+(r.SK||0)+(r.LP||0)+(r.OS||0);
+        const total = com+(r.Level||0)+(r.OT||0)+(r.R||0)+(r.S||0)+(r.Tip||0);
+        const rowBg = (no%2===0) ? 'F2F2F2' : null;
+        numCell(ws,  rowIdx,1,  no++,      rowBg);
+        textCell(ws, rowIdx,2,  empIdStr(r.nick), rowBg, false, 'center');
+        textCell(ws, rowIdx,3,  r.company, rowBg, false, 'center');
+        textCell(ws, rowIdx,4,  r.level,   rowBg, false, 'center');
+        textCell(ws, rowIdx,5,  r.fullName,rowBg, false, 'left');
+        textCell(ws, rowIdx,6,  r.nick,    rowBg, false, 'center');
+        numCell(ws,  rowIdx,7,  r.LS||0,   'EAF1DD');
+        numCell(ws,  rowIdx,8,  r.AS||0,   'DAEEF3');
+        numCell(ws,  rowIdx,9,  r.SK||0,   'FFE599');
+        numCell(ws,  rowIdx,10, r.LP||0,   'F2DBDB');
+        numCell(ws,  rowIdx,11, r.OS||0,   'D9D2E9');
+        numCell(ws,  rowIdx,12, com,        '93C47D');
+        numCell(ws,  rowIdx,13, r.Level||0,'A2C4C9');
+        numCell(ws,  rowIdx,14, r.OT||0,   '8E7CC3');
+        numCell(ws,  rowIdx,15, r.R||0,    'F6B26B');
+        numCell(ws,  rowIdx,16, r.S||0,    'F9CB9C');
+        numCell(ws,  rowIdx,17, r.Tip||0,  'FFF2CC');
+        numCell(ws,  rowIdx,18, total,     '00FFFF');
+        sCom+=com; sLS+=(r.LS||0); sAS+=(r.AS||0); sSK+=(r.SK||0); sLP+=(r.LP||0); sOS+=(r.OS||0);
+        sLvl+=(r.Level||0); sOT+=(r.OT||0); sR+=(r.R||0); sS+=(r.S||0); sTip+=(r.Tip||0);
+        rowIdx++;
+      }
+
+      // Sub-total — columns 7-11 show per-branch sums (not hard-coded 0)
+      const sTotal = sCom+sLvl+sOT+sR+sS+sTip;
+      textCell(ws, rowIdx,1, '',        'D6E4BC', true);
+      mergeRow(ws, rowIdx,2,6, 'รวม '+co, 'D6E4BC', true, 'left');
+      numCell(ws,  rowIdx,7,  sLS,  'D6E4BC'); numCell(ws,rowIdx,8,sAS,'D6E4BC'); numCell(ws,rowIdx,9,sSK,'D6E4BC'); numCell(ws,rowIdx,10,sLP,'D6E4BC'); numCell(ws,rowIdx,11,sOS,'D6E4BC');
+      numCell(ws,  rowIdx,12, sCom,  'D6E4BC');
+      numCell(ws,  rowIdx,13, sLvl,  'D6E4BC');
+      numCell(ws,  rowIdx,14, sOT,   'D6E4BC');
+      numCell(ws,  rowIdx,15, sR,    'D6E4BC');
+      numCell(ws,  rowIdx,16, sS,    'D6E4BC');
+      numCell(ws,  rowIdx,17, sTip,  'D6E4BC');
+      numCell(ws,  rowIdx,18, sTotal,'D6E4BC');
+      ws.getRow(rowIdx).height = 16;
+      rowIdx++;
+    }
+
+    // Grand total (exclude '?')
+    const valid = nickRecs.filter(r=>['Sinsub','Sukjai','Happines'].includes(r.company));
+    const gLS   = valid.reduce((s,r)=>(r.LS||0)+s, 0);
+    const gAS   = valid.reduce((s,r)=>(r.AS||0)+s, 0);
+    const gSK   = valid.reduce((s,r)=>(r.SK||0)+s, 0);
+    const gLP   = valid.reduce((s,r)=>(r.LP||0)+s, 0);
+    const gOS   = valid.reduce((s,r)=>(r.OS||0)+s, 0);
+    const gCom  = gLS+gAS+gSK+gLP+gOS;
+    const gLvl  = valid.reduce((s,r)=>(r.Level||0)+s, 0);
+    const gOT   = valid.reduce((s,r)=>(r.OT||0)+s, 0);
+    const gR    = valid.reduce((s,r)=>(r.R||0)+s, 0);
+    const gS    = valid.reduce((s,r)=>(r.S||0)+s, 0);
+    const gTip  = valid.reduce((s,r)=>(r.Tip||0)+s, 0);
+    const gTotal= gCom+gLvl+gOT+gR+gS+gTip;
+    textCell(ws, rowIdx,1,'','4472C4',true);
+    mergeRow(ws, rowIdx,2,6,'ยอดรวมทั้งหมด','4472C4',true,'left');
+    ws.getCell(rowIdx,2).font = { bold:true, name:'Calibri', size:11, color:{ argb:'FFFFFFFF' } };
+    numCell(ws,rowIdx,7,gLS,'4472C4'); numCell(ws,rowIdx,8,gAS,'4472C4'); numCell(ws,rowIdx,9,gSK,'4472C4'); numCell(ws,rowIdx,10,gLP,'4472C4'); numCell(ws,rowIdx,11,gOS,'4472C4');
+    numCell(ws,rowIdx,12,gCom,  '4472C4'); numCell(ws,rowIdx,13,gLvl,'4472C4');
+    numCell(ws,rowIdx,14,gOT,   '4472C4'); numCell(ws,rowIdx,15,gR,  '4472C4');
+    numCell(ws,rowIdx,16,gS,    '4472C4'); numCell(ws,rowIdx,17,gTip,'4472C4');
+    numCell(ws,rowIdx,18,gTotal,'4472C4');
+    // white text for grand total
+    for (let c=1;c<=18;c++) {
+      const cell = ws.getCell(rowIdx,c);
+      if (cell.font) cell.font = { ...cell.font, color:{ argb:'FFFFFFFF' }, bold:true };
+    }
+    ws.getRow(rowIdx).height = 18;
+  }
+
+  // ── BRANCH SHEET ─────────────────────────────────────────────────────────────
+  // Cols: 1=No,2=ID,3=Company,4=Level,5=Name-Surname,6=Nick,7=Com,8=Level฿,9=OT,10=R,11=S,12=Tip,13=Total
+  function buildBranchSheet(br, recs) {
+    const brName  = BR_NAME[br];
+    const brColor = BR_COLOR[br];
+    const ws = wb.addWorksheet(brName);
+    ws.views = [{ state:'frozen', ySplit:3 }];
+
+    // Aggregate by nick for this branch
+    const map = {}, order = [];
+    for (const r of recs) {
+      if (!map[r.nick]) {
+        map[r.nick] = { nick:r.nick, fullName:r.fullName||r.nick, company:r.company||'?', level:r.level||'',
+                        com:0, OT:0, R:0, S:0, Level:0, Tip:0 };
+        order.push(r.nick);
+      }
+      const nd = map[r.nick];
+      nd.com   += (r[br]||0);
+      nd.OT    += (r['OT_'+br]||0);
+      nd.R     += (r['R_'+br]||0);
+      nd.S     += (r['S_'+br]||0);
+      nd.Level += (r['Level_'+br]||0);                       // Level฿ per branch (this branch's hours)
+      if (_levelTipBranch(r) === br) nd.Tip += (r.Tip||0);   // Tip stays single-branch
+    }
+    const nickRecs = order.map(n=>map[n]).filter(r=>r.com||r.OT||r.R||r.S||r.Level||r.Tip);
+
+    // Row 1: Title
+    ws.mergeCells(1,1,1,13);
+    hdrCell(ws,1,1, `DIORA SPA — สาขา ${brName}  |  ${periodStr}`, brColor, true, 'left');
+    ws.getRow(1).height = 22;
+
+    // Row 2: Section headers
+    mergeRow(ws,2,1,6,'',null,false);
+    hdrCell(ws,2,7,  'Commission', brColor, true);
+    hdrCell(ws,2,8,  'Level฿',    'A2C4C9', true);
+    hdrCell(ws,2,9,  'OT',        '8E7CC3', true);
+    hdrCell(ws,2,10, 'R',         'F6B26B', true);
+    hdrCell(ws,2,11, 'S',         'F9CB9C', true);
+    hdrCell(ws,2,12, 'Tip',       'FFF2CC', true);
+    hdrCell(ws,2,13, 'รวมทั้งหมด','00FFFF', true);
+    ws.getRow(2).height = 18;
+
+    // Row 3: Column headers
+    const colH  = ['No','ID','Company','Level','Name-Surname','Nick','Com','Level฿','OT','R','S','Tip','Total'];
+    const colBg = [null,null,null,null,null,null,brColor,'A2C4C9','8E7CC3','F6B26B','F9CB9C','FFF2CC','00FFFF'];
+    colH.forEach((h,i) => hdrCell(ws,3,i+1,h,colBg[i],true,'center'));
+    ws.getRow(3).height = 18;
+
+    const widths = [5,8,11,10,30,9,12,10,10,10,10,10,12];
+    widths.forEach((w,i) => { ws.getColumn(i+1).width = w; });
+
+    let rowIdx=4, no=1;
+    for (const co of COMPANIES) {
+      const list = nickRecs.filter(r=>(co==='?')
+        ? !['Sinsub','Sukjai','Happines'].includes(r.company)
+        : r.company===co);
+      if (!list.length) continue;
+      // Sort ascending by scanner employee ID (unknown IDs sort last)
+      list.sort((a,b)=>empIdSortKey(a.nick)-empIdSortKey(b.nick));
+
+      textCell(ws,rowIdx,1,'',CO_BG[co],true);
+      mergeRow(ws,rowIdx,2,13,CO_LABEL[co],CO_BG[co],true,'left');
+      ws.getRow(rowIdx).height = 16;
+      rowIdx++;
+
+      let sCom=0,sLvl=0,sOT=0,sR=0,sS=0,sTip=0;
+      for (const r of list) {
+        const total=(r.com||0)+(r.Level||0)+(r.OT||0)+(r.R||0)+(r.S||0)+(r.Tip||0);
+        const rowBg=(no%2===0)?'F2F2F2':null;
+        numCell(ws, rowIdx,1,no++,     rowBg);
+        textCell(ws,rowIdx,2,empIdStr(r.nick),rowBg,false,'center');
+        textCell(ws,rowIdx,3,r.company,rowBg,false,'center');
+        textCell(ws,rowIdx,4,r.level,  rowBg,false,'center');
+        textCell(ws,rowIdx,5,r.fullName,rowBg,false,'left');
+        textCell(ws,rowIdx,6,r.nick,   rowBg,false,'center');
+        numCell(ws, rowIdx,7, r.com||0, brColor);
+        numCell(ws, rowIdx,8, r.Level||0,'A2C4C9');
+        numCell(ws, rowIdx,9, r.OT||0,  '8E7CC3');
+        numCell(ws, rowIdx,10,r.R||0,   'F6B26B');
+        numCell(ws, rowIdx,11,r.S||0,   'F9CB9C');
+        numCell(ws, rowIdx,12,r.Tip||0, 'FFF2CC');
+        numCell(ws, rowIdx,13,total,    '00FFFF');
+        sCom+=(r.com||0); sLvl+=(r.Level||0); sOT+=(r.OT||0); sR+=(r.R||0); sS+=(r.S||0); sTip+=(r.Tip||0);
+        rowIdx++;
+      }
+      const sTotal=sCom+sLvl+sOT+sR+sS+sTip;
+      textCell(ws,rowIdx,1,'','D6E4BC',true);
+      mergeRow(ws,rowIdx,2,6,'รวม '+co,'D6E4BC',true,'left');
+      numCell(ws,rowIdx,7,sCom,'D6E4BC'); numCell(ws,rowIdx,8,sLvl,'D6E4BC');
+      numCell(ws,rowIdx,9,sOT,'D6E4BC');  numCell(ws,rowIdx,10,sR,  'D6E4BC');
+      numCell(ws,rowIdx,11,sS,'D6E4BC');  numCell(ws,rowIdx,12,sTip,'D6E4BC');
+      numCell(ws,rowIdx,13,sTotal,'D6E4BC');
+      ws.getRow(rowIdx).height=16;
+      rowIdx++;
+    }
+
+    // Grand total
+    const valid=nickRecs.filter(r=>['Sinsub','Sukjai','Happines'].includes(r.company));
+    const gCom=valid.reduce((s,r)=>(r.com||0)+s,0);
+    const gLvl=valid.reduce((s,r)=>(r.Level||0)+s,0);
+    const gOT=valid.reduce((s,r)=>(r.OT||0)+s,0);
+    const gR=valid.reduce((s,r)=>(r.R||0)+s,0);
+    const gS=valid.reduce((s,r)=>(r.S||0)+s,0);
+    const gTip=valid.reduce((s,r)=>(r.Tip||0)+s,0);
+    const gTotal=gCom+gLvl+gOT+gR+gS+gTip;
+    textCell(ws,rowIdx,1,'','4472C4',true);
+    mergeRow(ws,rowIdx,2,6,'ยอดรวมทั้งหมด','4472C4',true,'left');
+    numCell(ws,rowIdx,7,gCom,'4472C4'); numCell(ws,rowIdx,8,gLvl,'4472C4');
+    numCell(ws,rowIdx,9,gOT,'4472C4');  numCell(ws,rowIdx,10,gR,  '4472C4');
+    numCell(ws,rowIdx,11,gS,'4472C4');  numCell(ws,rowIdx,12,gTip,'4472C4');
+    numCell(ws,rowIdx,13,gTotal,'4472C4');
+    for (let c=1;c<=13;c++) {
+      const cell=ws.getCell(rowIdx,c);
+      cell.font={ bold:true, name:'Calibri', size:11, color:{ argb:'FFFFFFFF' } };
+    }
+    ws.getRow(rowIdx).height=18;
+  }
+
+  // ── Build & Download ─────────────────────────────────────────────────────────
+  buildSummarySheet(masterRecords, 'รวมทุกสาขา');
+
+  // Branch sheets work on shallow copies with legacy OT/R/S seeded to the
+  // primary branch, so legacy records (totals only) appear in branch sheets —
+  // matches the DDP branch tables. Originals are not mutated. (2026-06-12)
+  const exportRecs = masterRecords.map(r => { const c = { ...r }; _seedLegacyPerBranch(c); return c; });
+  for (const br of BRANCHES) {
+    const brRecs = exportRecs.filter(r =>
+      ((r[br]||0)+(r['OT_'+br]||0)+(r['R_'+br]||0)+(r['S_'+br]||0)+(r['Level_'+br]||0)) > 0 ||
+      // Tip-only rows (manual entries) belong in their owner branch
+      (_levelTipBranch(r) === br && (r.Tip||0) > 0)
+    );
+    if (!brRecs.length) continue;
+    buildBranchSheet(br, brRecs);
+  }
+
+  const today = new Date().toISOString().slice(0,10);
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`DIORA_Master_${today}.xlsx`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+  if (_exBtn) { _exBtn.disabled = false; _exBtn.textContent = '📥 Export Excel'; }
+  showStatus('success', `📥 Export Excel เสร็จแล้ว (${masterRecords.length} records)`);
+}
+
+
+
+// ─── showStatus / showProgress ──────────────────────────────────────────────
+function showStatus(type, msg) {
+  const box = document.getElementById('status-box');
+  if (!box) return;
+  box.style.display = '';
+  const colors = { success:'#f0faf5', error:'#fff5f5', info:'#ebf8ff' };
+  const border  = { success:'#68d391', error:'#fc8181', info:'#63b3ed' };
+  const textCol = { success:'#276749', error:'#c53030', info:'#2b6cb0' };
+  box.style.background = colors[type]  || '#f7fafc';
+  box.style.border     = `1px solid ${border[type]||'#e2e8f0'}`;
+  box.style.color      = textCol[type] || '#2d3748';
+  box.style.borderRadius = '10px';
+  box.style.padding    = '10px 14px';
+  box.style.fontSize   = '13px';
+  box.style.whiteSpace = 'pre-line';
+  box.style.marginBottom = '12px';
+  box.textContent = msg;
+}
+
+function showProgress(pct) {
+  const wrap = document.getElementById('progress-wrap');
+  const bar  = document.getElementById('progress-bar');
+  if (!wrap || !bar) return;
+  if (pct <= 0) { wrap.style.display = 'none'; bar.style.width = '0%'; return; }
+  wrap.style.display = '';
+  bar.style.width = Math.min(100, pct) + '%';
+}
+
+// ═══════════════════════════════════════════════════════
+//  EMPLOYEES ROSTER EDITOR  (Employees tab)
+// ═══════════════════════════════════════════════════════
+let _empEditing = null;   // nick currently being edited inline
+let _empNew = false;      // a blank "add" row is showing
+
+function escAttr(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+const _EMP_COMPANIES = ['Sinsub','Sukjai','Happines','?'];
+const _EMP_LEVELS    = ['Basic','Silver','Gold','Trainer','OS'];
+const _EMP_SPECIAL_OPTS = ['None','90 Days'];
+function _empCoClass(c){ return ({Sinsub:'emp-co-sinsub',Sukjai:'emp-co-sukjai',Happines:'emp-co-happines'})[c] || 'emp-co-unknown'; }
+function _empSpecialBadge(s){
+  if(s==='90 Days') return '<span style="font-size:10px;background:#dd6b20;color:#fff;padding:1px 8px;border-radius:10px;font-weight:600">90 Days</span>';
+  return '<span style="color:#cbd5e0">—</span>';
+}
+
+function _empEditCells(e){
+  const co = _EMP_COMPANIES.map(c=>`<option ${e&&e.company===c?'selected':''}>${c}</option>`).join('');
+  const lv = _EMP_LEVELS.map(l=>`<option ${e&&e.level===l?'selected':''}>${l}</option>`).join('');
+  return `<td><input id="emp-f-id" class="num" value="${e&&e.id!=null?e.id:''}" placeholder="2000"></td>`+
+    `<td><input id="emp-f-nick" value="${e?escHtml(e.nick):''}" placeholder="Nick"></td>`+
+    `<td><input id="emp-f-name" value="${e?escHtml(e.name||''):''}" placeholder="ชื่อ-สกุล"></td>`+
+    `<td><select id="emp-f-company">${co}</select></td>`+
+    `<td><select id="emp-f-level">${lv}</select></td>`+
+    `<td><select id="emp-f-special">${_EMP_SPECIAL_OPTS.map(s=>`<option ${(e?(e.special||'None'):'None')===s?'selected':''}>${s}</option>`).join('')}</select></td>`;
+}
+
+function empRender(){
+  const tbl = document.getElementById('emp-tbl'); if(!tbl) return;
+  const q = (document.getElementById('emp-search')?.value||'').trim().toLowerCase();
+  const sorted = [...roster].sort((a,b)=>
+    ((a.id!=null?a.id:Infinity)-(b.id!=null?b.id:Infinity)) || String(a.nick).localeCompare(String(b.nick)));
+  let html = '<thead><tr><th class="num">ID</th><th>Nick</th><th>ชื่อ-สกุล</th><th>Company</th><th>Level</th><th>Special Status</th><th>จัดการ</th></tr></thead><tbody>';
+  if(_empNew){
+    html += `<tr class="editing">`+_empEditCells(null)+
+      `<td><button class="emp-act-btn btn-green" onclick="empSaveRow(null)">💾</button>`+
+      `<button class="emp-act-btn btn-gray" onclick="empCancel()">✕</button></td></tr>`;
+  }
+  let shown=0;
+  for(const e of sorted){
+    if(q && !((e.nick||'').toLowerCase().includes(q) || (e.name||'').toLowerCase().includes(q) || String(e.id||'').includes(q))) continue;
+    shown++;
+    if(_empEditing===e.nick){
+      html += `<tr class="editing">`+_empEditCells(e)+
+        `<td><button class="emp-act-btn btn-green" onclick="empSaveRow('${escAttr(e.nick)}')">💾</button>`+
+        `<button class="emp-act-btn btn-gray" onclick="empCancel()">✕</button></td></tr>`;
+    } else {
+      html += `<tr><td class="num">${e.id!=null?e.id:'<span style="color:#cbd5e0">—</span>'}</td>`+
+        `<td><strong>${escHtml(e.nick)}</strong></td>`+
+        `<td>${escHtml(e.name||'')}</td>`+
+        `<td class="${_empCoClass(e.company)}">${escHtml(e.company)}</td>`+
+        `<td>${escHtml(e.level)}</td>`+
+        `<td>${_empSpecialBadge(e.special)}</td>`+
+        `<td><button class="emp-act-btn btn-gray" onclick="empEdit('${escAttr(e.nick)}')">✏️</button>`+
+        `<button class="emp-act-btn btn-red" onclick="empDelete('${escAttr(e.nick)}')">🗑</button></td></tr>`;
+    }
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+  const cnt = document.getElementById('emp-count');
+  if(cnt) cnt.textContent = `${shown}/${roster.length} คน`;
+}
+
+function empAddRow(){ _empNew=true; _empEditing=null; empRender(); setTimeout(()=>document.getElementById('emp-f-id')?.focus(),0); }
+function empEdit(nick){ _empEditing=nick; _empNew=false; empRender(); setTimeout(()=>document.getElementById('emp-f-nick')?.focus(),0); }
+function empCancel(){ _empEditing=null; _empNew=false; empRender(); }
+
+function empSaveRow(origNick){
+  const idRaw   = (document.getElementById('emp-f-id').value||'').trim();
+  const nick    = (document.getElementById('emp-f-nick').value||'').trim();
+  const name    = (document.getElementById('emp-f-name').value||'').trim();
+  const company = document.getElementById('emp-f-company').value;
+  const level   = document.getElementById('emp-f-level').value;
+  const isOs    = (level === 'OS'); // OS column hidden — OS status derived from Level
+  const special = document.getElementById('emp-f-special').value || 'None';
+  if(!nick){ alert('กรุณากรอก Nick'); return; }
+  let id=null;
+  if(idRaw!==''){ if(!/^\d+$/.test(idRaw)){ alert('ID ต้องเป็นตัวเลขเท่านั้น'); return; } id=Number(idRaw); }
+  if(roster.some(e=>e.nick===nick && e.nick!==origNick)){ alert('Nick "'+nick+'" มีอยู่แล้ว'); return; }
+  if(id!=null && roster.some(e=>e.id===id && e.nick!==origNick)){
+    if(!confirm('ID '+id+' ซ้ำกับพนักงานคนอื่น — บันทึกต่อหรือไม่?')) return;
+  }
+  if(origNick===null){
+    roster.push({ nick, id, name, company, level, isOs, special, aliases: [] });
+  } else {
+    const e = roster.find(x=>x.nick===origNick);
+    if(e){ e.nick=nick; e.id=id; e.name=name; e.company=company; e.level=level; e.isOs=isOs; e.special=special; }
+  }
+  _empEditing=null; _empNew=false;
+  rebuildLookups(); rosterSaveLocal(); rosterGhSilentPush();
+  empRender();
+  showStatus('success','💾 บันทึกพนักงานแล้ว: '+nick);
+}
+
+function empDelete(nick){
+  if(!confirm('ลบพนักงาน "'+nick+'" ?\n(ข้อมูล Master ที่บันทึกไว้แล้วจะไม่ถูกลบ)')) return;
+  roster = roster.filter(e=>e.nick!==nick);
+  if(_empEditing===nick) _empEditing=null;
+  rebuildLookups(); rosterSaveLocal(); rosterGhSilentPush();
+  empRender();
+  showStatus('info','🗑 ลบ '+nick+' แล้ว');
+}
+
+function empResetDefaults(){
+  if(!confirm('คืนค่ารายชื่อพนักงานเป็นค่าเริ่มต้น?\nการแก้ไขทั้งหมดในเครื่องจะหายไป')) return;
+  roster = buildDefaultRoster();
+  _empEditing=null; _empNew=false;
+  rebuildLookups(); rosterSaveLocal(); rosterGhSilentPush();
+  empRender();
+  showStatus('info','↺ คืนค่ารายชื่อพนักงานเริ่มต้นแล้ว');
+}
+
+// ═══════════════════════════════════════════════════════
+//  ROSTER GITHUB SYNC  (sibling roster.json, same credentials as master)
+// ═══════════════════════════════════════════════════════
+function rosterGhPath(){
+  const p = ghGetConfig().path || 'data/master_summary.json';
+  const i = p.lastIndexOf('/');
+  return i>=0 ? p.slice(0,i+1)+'roster.json' : 'roster.json';
+}
+function _rosterSetSync(msg,color){
+  const el = document.getElementById('emp-roster-sync');
+  if(el){ el.textContent = msg; if(color) el.style.color = color; }
+}
+async function _rosterGhFetchSha(){
+  const { token, repo, branch } = ghGetConfig(); const path = rosterGhPath();
+  try{
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`,
+      { headers:{ Authorization:`token ${token}`, Accept:'application/vnd.github.v3+json' } });
+    if(res.ok){ const j=await res.json(); return j.sha||null; }
+  }catch(e){}
+  return null;
+}
+async function rosterGhFetch(){
+  const { token, repo, branch } = ghGetConfig(); const path = rosterGhPath();
+  if(!token||!repo){ _rosterSetSync('❌ ตั้งค่า GitHub ในแท็บ Settings ก่อน','#c53030'); return; }
+  _rosterSetSync('⏳ กำลังดึง roster จาก GitHub...','#718096');
+  try{
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`,
+      { headers:{ Authorization:`token ${token}`, Accept:'application/vnd.github.v3+json' } });
+    if(!res.ok){ if(res.status===404){ _rosterSetSync('ℹ️ ยังไม่มี roster.json ใน GitHub — ใช้รายชื่อในเครื่อง','#718096'); return; } throw new Error('HTTP '+res.status); }
+    const json = await res.json();
+    const content = JSON.parse(atob(json.content.replace(/\n/g,'')));
+    if(Array.isArray(content) && content.length){
+      roster = content; rebuildLookups(); rosterSaveLocal();
+      window._rosterSha = json.sha;
+      empRender();
+      _rosterSetSync(`✅ ดึง roster แล้ว — ${content.length} คน`,'#276749');
+    } else { _rosterSetSync('ℹ️ roster.json ว่างเปล่า','#718096'); }
+  }catch(e){ _rosterSetSync('❌ ดึงล้มเหลว: '+e.message,'#c53030'); }
+}
+async function rosterGhPush(){
+  const { token, repo, branch } = ghGetConfig(); const path = rosterGhPath();
+  if(!token||!repo){ _rosterSetSync('❌ ตั้งค่า GitHub ในแท็บ Settings ก่อน','#c53030'); return; }
+  _rosterSetSync('⏳ กำลัง push roster...','#718096');
+  try{
+    if(!window._rosterSha) window._rosterSha = await _rosterGhFetchSha();
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(roster, null, 2))));
+    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+    const doPut = () => {
+      const body = { message:`Update roster ${new Date().toISOString().slice(0,10)}`, content, branch };
+      if(window._rosterSha) body.sha = window._rosterSha;
+      return fetch(url,{ method:'PUT', headers:{ Authorization:`token ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+    };
+    let res = await doPut();
+    if(!res.ok && (res.status===409||res.status===422)){ window._rosterSha = await _rosterGhFetchSha(); res = await doPut(); }
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const j = await res.json(); window._rosterSha = j.content?.sha;
+    _rosterSetSync(`☁️ push roster สำเร็จ (${new Date().toLocaleTimeString('th-TH')})`,'#276749');
+  }catch(e){ _rosterSetSync('❌ push ล้มเหลว: '+e.message,'#c53030'); }
+}
+let _rosterPushTimer=null;
+function rosterGhSilentPush(){
+  const { token, repo } = ghGetConfig(); if(!token||!repo) return;
+  clearTimeout(_rosterPushTimer);
+  _rosterPushTimer = setTimeout(()=>{ rosterGhPush().catch(()=>{}); }, 1200);
+}
+
+// ─── switchTab ───────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  // Warn if user has unsaved branch edits in Master tab
+  if (tab !== 'master' && Object.values(_bdtEditing).some(v => v)) {
+    if (!confirm('⚠️ มีการแก้ไขสาขาที่ยังไม่ได้บันทึก\nออกจากหน้า Master จะสูญเสียการแก้ไขเหล่านี้\n\nต้องการออกหรือไม่?')) return;
+    _bdtEditing = {}; _bdtEdits = {}; _bdtNewRows = {};
+  }
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn, .side-nav-btn').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('tab-' + tab);
+  const btn  = document.getElementById('tab-btn-' + tab);
+  if (page) page.classList.add('active');
+  if (btn)  btn.classList.add('active');
+  if (tab === 'master')    msInit();
+  if (tab === 'employees') empRender();
+  if (tab === 'settings')  ghLoadSettings();
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Activate employee roster (seed defaults or load saved) BEFORE any data use
+  rosterInit();
+
+  // Drag-drop on Master upload box
+  const msBox = document.getElementById('ms-upload-box');
+  if (msBox) {
+    msBox.addEventListener('dragover', e => { e.preventDefault(); msBox.style.opacity = '0.7'; });
+    msBox.addEventListener('dragleave', () => { msBox.style.opacity = ''; });
+    msBox.addEventListener('drop', e => {
+      e.preventDefault(); msBox.style.opacity = '';
+      msHandleFiles(e.dataTransfer.files);
+    });
+  }
+
+  // Load master data
+  msLoadLocal();
+  msRefreshUI();
+
+  // Auto-collapse GitHub section if already configured
+  ghLoadSettings();
+  const { token, repo } = ghGetConfig();
+  if (token && repo) {
+    setTimeout(() => {
+      const wrap = document.getElementById('gh-form-wrap');
+      const btn  = document.getElementById('gh-collapse-btn');
+      if (wrap) wrap.style.display = 'none';
+      if (btn)  btn.textContent = '▼';
+    }, 50);
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  BACKUP / RESTORE  (added 2026-06-19)
+// ═══════════════════════════════════════════════════════
+function backupExport() {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    masterRecords: masterRecords,
+    roster: roster,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `diora_backup_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  _backupStatus(`✅ Export สำเร็จ — ไฟล์ diora_backup_${ts}.json ถูกดาวน์โหลดแล้ว`, '#276749');
+}
+
+function backupImport(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (!Array.isArray(payload.masterRecords)) throw new Error('ไฟล์ไม่ถูกต้อง: ไม่พบ masterRecords');
+      const days  = new Set(payload.masterRecords.map(r=>(r.date||'').split(',')[0].trim()).filter(Boolean)).size;
+      const emps  = new Set(payload.masterRecords.map(r=>r.nick)).size;
+      const rLen  = Array.isArray(payload.roster) ? payload.roster.length : '—';
+      const ok = confirm(
+        `📂 พบข้อมูล:
+` +
+        `  • ${payload.masterRecords.length} records (${days} วัน, ${emps} พนักงาน)
+` +
+        `  • Roster: ${rLen} คน
+
+` +
+        `⚠️ ข้อมูลปัจจุบันในโปรแกรมจะถูกแทนที่ทั้งหมด
+ดำเนินการต่อ?`
+      );
+      if (!ok) { ev.target.value = ''; return; }
+      masterRecords = payload.masterRecords;
+      msSaveLocal(true);
+      if (Array.isArray(payload.roster) && payload.roster.length) {
+        roster = payload.roster;
+        rebuildLookups();
+        rosterSaveLocal();
+      }
+      _backupStatus(`✅ Import สำเร็จ — ${payload.masterRecords.length} records, ${rLen} พนักงานในระบบ`, '#276749');
+      msRefreshUI();
+      switchTab('master');
+    } catch(err) {
+      _backupStatus(`❌ Import ล้มเหลว: ${err.message}`, '#c53030');
+    }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function _backupStatus(msg, color) {
+  const el = document.getElementById('backup-status');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.color   = color || '#2d3748';
+  el.textContent   = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+
+</script>
+</body>
+</html>
